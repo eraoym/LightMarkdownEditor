@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe -Command \"Set-Location ''C:\\\\Users\\\\yinya\\\\Desktop\\\\dev\\\\LightMarkdownEditor''; pnpm add react-markdown remark-gfm ''@tauri-apps/plugin-fs'' ''@tauri-apps/plugin-dialog'' 2>&1\")",
+      "Bash(powershell.exe -Command \"Set-Location ''C:\\\\Users\\\\yinya\\\\Desktop\\\\dev\\\\LightMarkdownEditor''; pnpm add -D ''@tailwindcss/typography'' 2>&1\")",
+      "Bash(powershell.exe -Command \"Set-Location ''C:\\\\Users\\\\yinya\\\\Desktop\\\\dev\\\\LightMarkdownEditor''; pnpm exec tsc --noEmit 2>&1\")"
+    ]
+  }
+}
