@@ -1,3 +1,7 @@
+# Claude
+.claude/*
+.craiderules
+
 # Logs
 logs
 *.log
