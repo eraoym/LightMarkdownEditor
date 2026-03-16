@@ -1,32 +1,28 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-16
+> 最終更新: 2026-03-16（タブ + エクスプローラーサイドバー追加）
 
 ---
 
 ## 画面レイアウト
 
-EditMode と PreviewMode をヘッダーのトグルで切り替える。各モードは全画面幅で表示される。
-
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  [開く]  ファイル名.md  ●   [編集] [プレビュー]  ☀/🌙  │  ← ヘッダーバー（高さ固定）
-├─────────────────────────────────────────────────────────┤
-│  B  I  H1  H2  H3  —  1.  `                            │  ← ツールバー（EditMode のみ）
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│   Markdown 入力（EditMode）                              │
-│   または                                                │
-│   HTML プレビュー（PreviewMode）                         │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│ [☰][開く]              [編集][プレビュー] [☀/🌙]   │ Header
+├────────────────────────────────────────────────────┤
+│ [+][tab1 ●×][tab2 ×]                              │ TabBar
+├──────────┬─────────────────────────────────────────┤
+│          │ [B][I][H1]... (edit mode only)          │ Toolbar
+│ Explorer ├─────────────────────────────────────────┤
+│ sidebar  │                                         │
+│ (w-48,   │  Editor / Preview                       │
+│  toggle) │                                         │
+└──────────┴─────────────────────────────────────────┘
 ```
 
-- ヘッダーに「編集」「プレビュー」のセグメントトグルを配置
-- アクティブなモードはボタンをハイライト表示（`bg-zinc-200 dark:bg-zinc-700`）
-- ヘッダー右端に ☀/🌙 ボタンでダークモード手動切替
-- ツールバーは EditMode 時のみ表示
-- 各モードは全幅（`w-full`）・全高（`h-full`）で表示
+- ヘッダー左端に `☰` でエクスプローラーサイドバーのトグル
+- タブバーで複数ファイルを同時編集可能
+- エクスプローラーは左サイドバー（幅 `w-48` 固定）、`☰` でトグル
 
 ---
 
@@ -55,24 +51,26 @@ Tailwind v4 クラスベースのダークモード（`@custom-variant dark (&:w
 
 ```text
 App
-├── Header          ← 「開く」ボタン、ファイル名表示、保存状態、モード切替トグル、テーマ切替ボタン
-├── Toolbar         ← フォーマットツールバー（EditMode 時のみ）
-├── Editor          ← textarea（EditMode 時に全画面表示）+ forwardRef
-└── Preview         ← react-markdown（PreviewMode 時に全画面表示）
+├── Header          ← ☰ ボタン、「開く」ボタン、モード切替トグル、テーマ切替ボタン
+├── TabBar          ← タブ一覧（+/×/未保存●）
+├── div.flex
+│   ├── Explorer    ← エクスプローラーサイドバー（☰ トグル）
+│   └── div.flex-col
+│       ├── Toolbar     ← フォーマットツールバー（EditMode 時のみ）
+│       ├── Editor      ← textarea（EditMode 時）
+│       └── Preview     ← react-markdown（PreviewMode 時）
 ```
 
 ### App（状態管理の中心）
 
 ```ts
-type SaveState = "saved" | "unsaved" | "saving";
-type Mode = "edit" | "preview";
+// タブ・履歴管理（useTabs に移動）
+const tabs = useTabs();
 
-// 管理する状態
-const [markdown, setMarkdown] = useState<string>("");
-const [filePath, setFilePath] = useState<string | null>(null); // null = 未保存の新規
-const [saveState, setSaveState] = useState<SaveState>("saved");
+// App ローカル状態
 const [mode, setMode] = useState<Mode>("edit");
-const [isDark, setIsDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+const [isDark, setIsDark] = useState(...);
+const [isExplorerOpen, setIsExplorerOpen] = useState(false);
 const textareaRef = useRef<HTMLTextAreaElement>(null);
 ```
 
@@ -80,13 +78,35 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 | Props | 型 | 説明 |
 | --- | --- | --- |
-| `filePath` | `string \| null` | 表示するファイルパス（null なら「新規ファイル」） |
-| `saveState` | `SaveState` | 保存状態の表示切替 |
+| `filePath` | `string \| null` | アクティブタブのファイルパス |
+| `saveState` | `SaveState` | アクティブタブの保存状態 |
 | `onOpen` | `() => void` | 「開く」ボタン押下ハンドラ |
-| `mode` | `Mode` | 現在のモード（アクティブボタンのハイライトに使用） |
+| `mode` | `Mode` | 現在のモード |
 | `onModeChange` | `(mode: Mode) => void` | モード切替ハンドラ |
 | `isDark` | `boolean` | 現在のテーマ状態 |
 | `onThemeToggle` | `() => void` | テーマ切替ハンドラ |
+| `isExplorerOpen` | `boolean` | エクスプローラー表示状態 |
+| `onExplorerToggle` | `() => void` | エクスプローラートグルハンドラ |
+
+### TabBar
+
+| Props | 型 | 説明 |
+| --- | --- | --- |
+| `tabs` | `Readonly<TabData>[]` | タブ一覧 |
+| `activeId` | `string` | アクティブタブの ID |
+| `onNew` | `() => void` | 新規タブ作成 |
+| `onSwitch` | `(id: string) => void` | タブ切替 |
+| `onClose` | `(id: string) => void` | タブ閉じる（confirm 済み前提） |
+
+### Explorer
+
+| Props | 型 | 説明 |
+| --- | --- | --- |
+| `onOpenFile` | `(path: string) => void` | ファイルクリック時のハンドラ |
+
+- フォルダ選択ボタン → `readDir` でツリー表示
+- フォルダクリック → 遅延展開/折り畳み
+- ファイルクリック → `onOpenFile` を呼び出し
 
 ### Toolbar
 
@@ -130,20 +150,25 @@ Editor の追加機能:
 
 ## hooks
 
-### useHistory
+### useTabs
+
+多タブ対応の状態管理フック。`useHistory` を置き換える。
 
 ```ts
-export function useHistory(initial: string): {
-  value: string;
-  set: (v: string) => void;          // 通常タイピング用（500ms デバウンスでコミット）
-  setImmediate: (v: string) => void; // プログラム変更用（即時コミット）
-  undo: () => boolean;
-  redo: () => boolean;
-  reset: (v: string) => void;        // ファイルを開くとき、履歴ごとリセット
-}
+// タブデータはすべて useRef で保持し、tick で再描画をトリガー
+export function useTabs(): UseTabsReturn
 ```
 
-履歴スタックは最大 200 エントリ。デバウンス中に Ctrl+Z が来た場合は、まず現在の状態をコミットしてから戻る。
+主要な返り値:
+- `tabs`, `activeId`, `activeContent`, `activeFilePath`, `activeSaveState` — 描画用
+- `newTab()`, `closeTab(id)`, `switchTab(id)`, `nextTab()`, `prevTab()` — タブ操作
+- `findTabByPath(path)` — 同一ファイルの重複チェック
+- `openFileInTab(path, content, targetId?)` — ファイルを特定タブに開く
+- `setActiveContent(v)` — 500ms デバウンスでコミット（タイピング用）
+- `setActiveContentImmediate(v)` — 即時コミット（ツールバー/Tab補完用）
+- `undo()`, `redo()` — タブごとに独立した履歴
+
+各タブは独立した履歴スタックを持つ（最大 200 エントリ）。
 
 ### useEditorActions
 
@@ -175,6 +200,8 @@ export function useEditorActions(
 | `Ctrl+I` | 斜体（Italic） |
 | `Ctrl+Z` | アンドゥ |
 | `Ctrl+Y` | リドゥ |
+| `Ctrl+Tab` | 次のタブへ切替 |
+| `Ctrl+Shift+Tab` | 前のタブへ切替 |
 | `Tab` | スペース2個挿入（Editor内） |
 | `Shift+Tab` | 行頭スペース2個削除（Editor内） |
 
@@ -251,14 +278,18 @@ export function useEditorActions(
 
 ```text
 src/
+├── types.ts              # 共通型: TabData, SaveState, Mode
 ├── App.tsx               # 状態管理・キーボードショートカット・Tauri 呼び出し
 ├── components/
-│   ├── Header.tsx        # テーマ切替ボタン追加
-│   ├── Editor.tsx        # forwardRef・Tab/括弧補完追加
-│   ├── Toolbar.tsx       # 新規: フォーマットツールバー
+│   ├── Header.tsx        # ☰ ボタン追加
+│   ├── TabBar.tsx        # タブバー UI
+│   ├── Explorer.tsx      # エクスプローラーサイドバー
+│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（Ctrl+Tab 競合修正済み）
+│   ├── Toolbar.tsx       # フォーマットツールバー
 │   └── Preview.tsx
 ├── hooks/
-│   ├── useHistory.ts        # 新規: Undo/Redo 履歴管理
-│   └── useEditorActions.ts  # 新規: テキスト操作ロジック
+│   ├── useTabs.ts           # 多タブ履歴管理フック
+│   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）
+│   └── useEditorActions.ts  # テキスト操作ロジック
 └── index.css             # @custom-variant dark 追加
 ```

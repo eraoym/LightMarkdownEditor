@@ -15,7 +15,7 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
     const start = el.selectionStart;
     const end = el.selectionEnd;
 
-    if (e.key === "Tab") {
+    if (e.key === "Tab" && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
       if (e.shiftKey) {
         // Shift+Tab: 行頭のスペース2個削除

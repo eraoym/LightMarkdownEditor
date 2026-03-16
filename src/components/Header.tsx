@@ -1,5 +1,4 @@
-type SaveState = "saved" | "unsaved" | "saving";
-type Mode = "edit" | "preview";
+import type { SaveState, Mode } from "../types";
 
 interface HeaderProps {
   filePath: string | null;
@@ -9,6 +8,8 @@ interface HeaderProps {
   onModeChange: (mode: Mode) => void;
   isDark: boolean;
   onThemeToggle: () => void;
+  isExplorerOpen: boolean;
+  onExplorerToggle: () => void;
 }
 
 export default function Header({
@@ -19,6 +20,8 @@ export default function Header({
   onModeChange,
   isDark,
   onThemeToggle,
+  isExplorerOpen,
+  onExplorerToggle,
 }: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
@@ -33,6 +36,13 @@ export default function Header({
 
   return (
     <header className="flex items-center gap-3 px-4 h-10 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
+      <button
+        onClick={onExplorerToggle}
+        title="エクスプローラーを切替"
+        className={`text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isExplorerOpen ? "bg-zinc-200 dark:bg-zinc-700" : ""}`}
+      >
+        ☰
+      </button>
       <button
         onClick={onOpen}
         className="text-sm px-3 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
