@@ -1,6 +1,6 @@
 # 実装状況
 
-> 最終更新: 2026-03-16（EditMode/PreviewMode 切り替え対応）
+> 最終更新: 2026-03-16（テキスト編集補助機能 + ダークモード手動切替 対応）
 
 ---
 
@@ -10,13 +10,19 @@
 - Vite 7 によるフロントエンドビルド環境
 - Tailwind CSS v4 の導入（`@tailwindcss/vite` プラグイン経由）
 - OS のライト/ダークテーマへの自動連動（`prefers-color-scheme`）
-- Markdown テキストの入力 UI（`textarea`、モノスペースフォント、80vh 高さ）
+- **ダークモード手動切替**（ヘッダーの ☀/🌙 ボタン、OS 設定を初期値として使用）
+- Markdown テキストの入力 UI（`textarea`、モノスペースフォント）
 - `pnpm tauri dev` でデスクトップウィンドウの起動確認
 - TypeScript の型チェックエラーなし（`tsc --noEmit` 通過済み）
 - Markdown プレビュー（`react-markdown` + `remark-gfm` + `@tailwindcss/typography`）
 - EditMode / PreviewMode 切り替え（ヘッダーのトグルボタンで全画面表示を切替）
 - ファイルの保存・読み込み（`tauri-plugin-fs` + `tauri-plugin-dialog`、Ctrl+S 対応）
 - ウィンドウタイトル（開いているファイル名を反映、新規は `light-md`）
+- **フォーマットツールバー**（Bold/Italic/H1-H3/箇条書き/番号リスト/コード、EditMode のみ表示）
+- **キーボードショートカット**: `Ctrl+B`（太字）、`Ctrl+I`（斜体）、`Ctrl+Z`（アンドゥ）、`Ctrl+Y`（リドゥ）
+- **Undo/Redo 履歴管理**（`useHistory`：最大200エントリ、タイピングは500msデバウンス、プログラム変更は即時コミット）
+- **Tab インデント**: Tab でスペース2個挿入、Shift+Tab で削除
+- **括弧・記号の自動補完**: `(`, `[`, `` ` `` に対応
 
 ---
 
@@ -33,7 +39,6 @@
 | 機能 | 概要 |
 |---|---|
 | シンタックスハイライト | コードブロックのカラーリング |
-| テキスト編集補助 | ツールバーによる Markdown 記法の挿入 |
 | ファイルタブ | 複数ファイルの同時編集 |
 | 設定画面 | フォントサイズ、テーマカラーなどのユーザー設定 |
 | アプリアイコン | デフォルトの Tauri アイコンのまま |

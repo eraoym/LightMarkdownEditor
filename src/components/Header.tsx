@@ -7,9 +7,19 @@ interface HeaderProps {
   onOpen: () => void;
   mode: Mode;
   onModeChange: (mode: Mode) => void;
+  isDark: boolean;
+  onThemeToggle: () => void;
 }
 
-export default function Header({ filePath, saveState, onOpen, mode, onModeChange }: HeaderProps) {
+export default function Header({
+  filePath,
+  saveState,
+  onOpen,
+  mode,
+  onModeChange,
+  isDark,
+  onThemeToggle,
+}: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
     : "新規ファイル";
@@ -45,6 +55,13 @@ export default function Header({ filePath, saveState, onOpen, mode, onModeChange
           プレビュー
         </button>
       </div>
+      <button
+        onClick={onThemeToggle}
+        title={isDark ? "ライトモードに切替" : "ダークモードに切替"}
+        className="text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      >
+        {isDark ? "☀" : "🌙"}
+      </button>
     </header>
   );
 }
