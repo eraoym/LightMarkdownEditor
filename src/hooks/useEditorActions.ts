@@ -88,19 +88,6 @@ export function useEditorActions(
     });
   }
 
-  function insertAtCursor(text: string) {
-    const el = textareaRef.current;
-    if (!el) return;
-    const { start } = getSel();
-    const current = el.value;
-    const newText = current.slice(0, start) + text + current.slice(start);
-    setMarkdown(newText);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + text.length, start + text.length);
-    });
-  }
-
   function code() {
     const el = textareaRef.current;
     if (!el) return;
