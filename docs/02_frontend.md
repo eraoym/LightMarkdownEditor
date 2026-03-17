@@ -1,29 +1,31 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-17（mermaid対応、画像表示、バイナリ非表示、サイドバーリサイズ追加）
+> 最終更新: 2026-03-17（スプリットプレビュー・TOCサイドバー・セッション永続化・タブ右クリックメニュー追加）
 
 ---
 
 ## 画面レイアウト
 
 ```text
-┌────────────────────────────────────────────────────┐
-│ [☰][開く]              [編集][プレビュー] [☀/🌙]   │ Header
-├────────────────────────────────────────────────────┤
-│ [+][tab1 ●×][tab2 ×]                              │ TabBar
-├──────────┬─────────────────────────────────────────┤
-│          │ [B][I][H1]... (edit mode only)          │ Toolbar
-│ Explorer ├─────────────────────────────────────────┤
-│ sidebar  │                                         │
-│ (w-48,   │  Editor / Preview                       │
-│  toggle) │                                         │
-└──────────┴─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ [☰][開く]         [Split/TOC] [編集][プレビュー] [☀/🌙]         │ Header
+├──────────────────────────────────────────────────────────────────┤
+│ [+][tab1 ●×][tab2 ×]                                            │ TabBar
+├──────────┬──────────────────────────┬─┬──────────────────────────┤
+│          │ [B][I][H1]... (編集時)   │ │                          │ Toolbar
+│ Explorer ├──────────────────────────┤ ├──────────────────────────┤
+│ sidebar  │                          │▌│ Preview / TOC sidebar    │
+│ (toggle) │  Editor                  │ │                          │
+│          │                          │ │                          │
+└──────────┴──────────────────────────┴─┴──────────────────────────┘
 ```
 
 - ヘッダー左端に `☰` でエクスプローラーサイドバーのトグル
 - タブバーで複数ファイルを同時編集可能
 - エクスプローラーは左サイドバー（幅可変、初期 192px、min 160px / max 480px）、`☰` でトグル
-- サイドバーとメインコンテンツの間にドラッグハンドルでリサイズ可能（幅は localStorage 永続化）
+- **スプリットプレビュー（編集モード時）**: `Split` ボタンでエディタ右にプレビューを横並び表示。ハンドルでリサイズ（幅は localStorage 永続化）
+- **TOCサイドバー（プレビューモード時）**: `TOC` ボタンでプレビュー右に目次サイドバーを表示。ハンドルでリサイズ（幅は localStorage 永続化）
+- サイドバー・ハンドルとも localStorage で幅永続化
 - ウィンドウサイズも localStorage に保存し、起動時に復元
 
 ---
@@ -54,15 +56,32 @@ Tailwind v4 クラスベースのダークモード（`@custom-variant dark (&:w
 
 ```text
 App
-├── Header          ← ☰ ボタン、「開く」ボタン、モード切替トグル、テーマ切替ボタン
+├── Header          ← ☰ ボタン、「開く」ボタン、Split/TOC トグル、モード切替、テーマ切替ボタン
 ├── TabBar          ← タブ一覧（+/×/未保存●）
 ├── div.flex
 │   ├── Explorer    ← エクスプローラーサイドバー（☰ トグル）
 │   └── div.flex-col
-│       ├── Toolbar     ← フォーマットツールバー（EditMode 時のみ）
-│       ├── Editor      ← textarea（EditMode 時）
-│       └── Preview     ← react-markdown（PreviewMode 時）
+│       ├── Toolbar         ← フォーマットツールバー（EditMode 時のみ）
+│       └── div.flex
+│           ├── Editor      ← textarea（EditMode 時）
+│           ├── [divider]   ← リサイズハンドル（スプリット時）
+│           ├── Preview     ← react-markdown（EditMode スプリット時 or PreviewMode 時）
+│           ├── [divider]   ← リサイズハンドル（TOC 表示時）
+│           └── TocSidebar  ← 目次サイドバー（PreviewMode + TOC ON 時）
 ```
+
+### セッション永続化
+
+起動時に前回開いていたタブとフォルダを自動復元する。
+
+| キー | 内容 |
+| --- | --- |
+| `session_tabs` | `[{filePath}]` — ファイルパスのみ保存（内容は起動時に再読み込み） |
+| `session_activeFilePath` | 前回アクティブだったファイルパス |
+| `explorerPath` | 前回選択したフォルダパス |
+
+- `filePath` がない（新規未保存）タブは保存しない
+- ファイルが移動・削除されていた場合はそのタブをスキップ
 
 ### App（状態管理の中心）
 
@@ -74,6 +93,13 @@ const tabs = useTabs();
 const [mode, setMode] = useState<Mode>("edit");
 const [isDark, setIsDark] = useState(...);
 const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem("sidebarWidth") ?? "192"));
+// スプリットプレビュー（編集モード時のみ有効）
+const [isSplitPreview, setIsSplitPreview] = useState(false);
+const [splitWidth, setSplitWidth] = useState(() => parseInt(localStorage.getItem("splitWidth") ?? "50"));
+// TOCサイドバー（プレビューモード時のみ有効）
+const [isTocOpen, setIsTocOpen] = useState(false);
+const [tocWidth, setTocWidth] = useState(() => parseInt(localStorage.getItem("tocWidth") ?? "220"));
 const textareaRef = useRef<HTMLTextAreaElement>(null);
 ```
 
@@ -90,6 +116,10 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `onThemeToggle` | `() => void` | テーマ切替ハンドラ |
 | `isExplorerOpen` | `boolean` | エクスプローラー表示状態 |
 | `onExplorerToggle` | `() => void` | エクスプローラートグルハンドラ |
+| `isSplitPreview` | `boolean` | スプリットプレビュー表示状態 |
+| `onSplitPreviewToggle` | `() => void` | スプリットプレビュートグルハンドラ |
+| `isTocOpen` | `boolean` | TOCサイドバー表示状態 |
+| `onTocToggle` | `() => void` | TOCサイドバートグルハンドラ |
 
 ### TabBar
 
@@ -100,6 +130,10 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `onNew` | `() => void` | 新規タブ作成 |
 | `onSwitch` | `(id: string) => void` | タブ切替 |
 | `onClose` | `(id: string) => void` | タブ閉じる（confirm 済み前提） |
+| `onCloseOthers` | `(id: string) => void` | 他のタブをすべて閉じる（confirm 済み前提） |
+| `onCloseAll` | `() => void` | すべてのタブを閉じる（confirm 済み前提） |
+
+右クリックコンテキストメニューで「タブを閉じる」「他のタブをすべて閉じる」「すべてのタブを閉じる」を表示。メニュー外クリックで自動的に閉じる。
 
 ### Explorer
 
@@ -112,6 +146,18 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 - フォルダクリック → 遅延展開/折り畳み
 - ファイルクリック → `onOpenFile` を呼び出し
 - `width` props で動的幅対応（App から渡す、`style={{ width }}` で適用）
+
+### TocSidebar
+
+| Props | 型 | 説明 |
+| --- | --- | --- |
+| `markdown` | `string` | 目次抽出対象の Markdown テキスト |
+| `width` | `number` | サイドバー幅（px）|
+
+- `useMemo` で `markdown` が変わった時のみ見出しを再抽出
+- `/^(#{1,6})\s+(.+)$/gm` で H1〜H6 を抽出
+- 見出しレベルに応じて `paddingLeft: (level-1) * 12px` でインデント表示
+- PreviewMode + `isTocOpen` の時のみ表示
 
 ### Toolbar
 
@@ -292,12 +338,13 @@ src/
 ├── types.ts              # 共通型: TabData, SaveState, Mode
 ├── App.tsx               # 状態管理・キーボードショートカット・Tauri 呼び出し
 ├── components/
-│   ├── Header.tsx        # ☰ ボタン追加
+│   ├── Header.tsx        # ☰ / Split / TOC トグルボタン追加
 │   ├── TabBar.tsx        # タブバー UI
 │   ├── Explorer.tsx      # エクスプローラーサイドバー
-│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（Ctrl+Tab 競合修正済み）
+│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（style props 対応）
 │   ├── Toolbar.tsx       # フォーマットツールバー
-│   └── Preview.tsx
+│   ├── Preview.tsx
+│   └── TocSidebar.tsx    # 目次サイドバー（PreviewMode 用）
 ├── hooks/
 │   ├── useTabs.ts           # 多タブ履歴管理フック
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）

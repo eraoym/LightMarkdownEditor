@@ -5,10 +5,11 @@ interface EditorProps {
   onChange: (value: string) => void;
   onProgrammaticChange: (value: string) => void;
   onImagePaste?: (blob: Blob, start: number, end: number) => void;
+  style?: React.CSSProperties;
 }
 
 const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
-  { value, onChange, onProgrammaticChange, onImagePaste },
+  { value, onChange, onProgrammaticChange, onImagePaste, style },
   ref
 ) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -79,7 +80,8 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
   return (
     <textarea
       ref={ref}
-      className="w-full h-full resize-none p-4 text-sm font-mono leading-relaxed bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none"
+      className="h-full resize-none p-4 text-sm font-mono leading-relaxed bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none"
+      style={style ?? { width: "100%" }}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}

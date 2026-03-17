@@ -51,6 +51,8 @@ export interface UseTabsReturn {
 
   newTab: () => void;
   closeTab: (id: string) => void;
+  closeOtherTabs: (id: string) => void;
+  closeAllTabs: () => void;
   switchTab: (id: string) => void;
   nextTab: () => void;
   prevTab: () => void;
@@ -101,6 +103,30 @@ export function useTabs(): UseTabsReturn {
     },
     [bump]
   );
+
+  const closeOtherTabs = useCallback(
+    (id: string) => {
+      for (const tab of tabsDataRef.current) {
+        if (tab.id !== id && tab.historyTimer) clearTimeout(tab.historyTimer);
+      }
+      const remaining = tabsDataRef.current.filter((t) => t.id === id);
+      const newTabs = remaining.length > 0 ? remaining : [createEmptyTab()];
+      activeIdRef.current = newTabs[0].id;
+      tabsDataRef.current = newTabs;
+      bump();
+    },
+    [bump]
+  );
+
+  const closeAllTabs = useCallback(() => {
+    for (const tab of tabsDataRef.current) {
+      if (tab.historyTimer) clearTimeout(tab.historyTimer);
+    }
+    const empty = createEmptyTab();
+    tabsDataRef.current = [empty];
+    activeIdRef.current = empty.id;
+    bump();
+  }, [bump]);
 
   const switchTab = useCallback(
     (id: string) => {
@@ -249,6 +275,8 @@ export function useTabs(): UseTabsReturn {
     activeSaveState: active?.saveState ?? "saved",
     newTab,
     closeTab,
+    closeOtherTabs,
+    closeAllTabs,
     switchTab,
     nextTab,
     prevTab,

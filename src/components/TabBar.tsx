@@ -1,4 +1,11 @@
+import { useEffect, useState } from "react";
 import type { TabData } from "../types";
+
+interface ContextMenuState {
+  tabId: string;
+  x: number;
+  y: number;
+}
 
 interface TabBarProps {
   tabs: Readonly<TabData>[];
@@ -6,6 +13,8 @@ interface TabBarProps {
   onNew: () => void;
   onSwitch: (id: string) => void;
   onClose: (id: string) => void;
+  onCloseOthers: (id: string) => void;
+  onCloseAll: () => void;
 }
 
 export default function TabBar({
@@ -14,7 +23,22 @@ export default function TabBar({
   onNew,
   onSwitch,
   onClose,
+  onCloseOthers,
+  onCloseAll,
 }: TabBarProps) {
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handler = () => setContextMenu(null);
+    document.addEventListener("click", handler);
+    document.addEventListener("contextmenu", handler);
+    return () => {
+      document.removeEventListener("click", handler);
+      document.removeEventListener("contextmenu", handler);
+    };
+  }, [contextMenu]);
+
   return (
     <div className="flex items-center border-b border-zinc-200 dark:border-zinc-700 shrink-0 overflow-hidden">
       <button
@@ -40,6 +64,11 @@ export default function TabBar({
                   : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-750"
               }`}
               onClick={() => onSwitch(tab.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setContextMenu({ tabId: tab.id, x: e.clientX, y: e.clientY });
+              }}
             >
               <span className="truncate flex-1 text-xs">{label}</span>
               {tab.saveState === "unsaved" && (
@@ -60,6 +89,34 @@ export default function TabBar({
           );
         })}
       </div>
+
+      {contextMenu && (
+        <div
+          className="fixed z-50 min-w-[160px] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded shadow-lg py-1 text-sm"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full text-left px-4 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            onClick={() => { onClose(contextMenu.tabId); setContextMenu(null); }}
+          >
+            タブを閉じる
+          </button>
+          <button
+            className="w-full text-left px-4 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            onClick={() => { onCloseOthers(contextMenu.tabId); setContextMenu(null); }}
+          >
+            他のタブをすべて閉じる
+          </button>
+          <div className="border-t border-zinc-200 dark:border-zinc-600 my-1" />
+          <button
+            className="w-full text-left px-4 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            onClick={() => { onCloseAll(); setContextMenu(null); }}
+          >
+            すべてのタブを閉じる
+          </button>
+        </div>
+      )}
     </div>
   );
 }

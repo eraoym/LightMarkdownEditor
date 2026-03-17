@@ -10,6 +10,10 @@ interface HeaderProps {
   onThemeToggle: () => void;
   isExplorerOpen: boolean;
   onExplorerToggle: () => void;
+  isSplitPreview: boolean;
+  onSplitPreviewToggle: () => void;
+  isTocOpen: boolean;
+  onTocToggle: () => void;
 }
 
 export default function Header({
@@ -22,6 +26,10 @@ export default function Header({
   onThemeToggle,
   isExplorerOpen,
   onExplorerToggle,
+  isSplitPreview,
+  onSplitPreviewToggle,
+  isTocOpen,
+  onTocToggle,
 }: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
@@ -65,6 +73,24 @@ export default function Header({
           プレビュー
         </button>
       </div>
+      {mode === "edit" && (
+        <button
+          onClick={onSplitPreviewToggle}
+          title="スプリットプレビューを切替"
+          className={`text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isSplitPreview ? "bg-zinc-200 dark:bg-zinc-700" : ""}`}
+        >
+          Split
+        </button>
+      )}
+      {mode === "preview" && (
+        <button
+          onClick={onTocToggle}
+          title="目次サイドバーを切替"
+          className={`text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isTocOpen ? "bg-zinc-200 dark:bg-zinc-700" : ""}`}
+        >
+          TOC
+        </button>
+      )}
       <button
         onClick={onThemeToggle}
         title={isDark ? "ライトモードに切替" : "ダークモードに切替"}

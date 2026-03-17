@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 
@@ -61,10 +61,18 @@ export default function Explorer({ onOpenFile, width }: ExplorerProps) {
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [tree, setTree] = useState<TreeNode[]>([]);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("explorerPath");
+    if (!saved) return;
+    setRootPath(saved);
+    loadChildren(saved).then(setTree).catch(() => {});
+  }, []);
+
   const handleSelectFolder = async () => {
     const selected = await open({ directory: true });
     if (typeof selected !== "string") return;
     setRootPath(selected);
+    localStorage.setItem("explorerPath", selected);
     const children = await loadChildren(selected);
     setTree(children);
   };

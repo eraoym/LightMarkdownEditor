@@ -8,6 +8,7 @@ import Preview from "./components/Preview";
 import Toolbar from "./components/Toolbar";
 import TabBar from "./components/TabBar";
 import Explorer from "./components/Explorer";
+import TocSidebar from "./components/TocSidebar";
 import { useEditorActions } from "./hooks/useEditorActions";
 import { useTabs } from "./hooks/useTabs";
 import type { Mode } from "./types";
@@ -31,6 +32,14 @@ export default function App() {
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     parseInt(localStorage.getItem("sidebarWidth") ?? "192")
   );
+  const [isSplitPreview, setIsSplitPreview] = useState(false);
+  const [splitWidth, setSplitWidth] = useState(() =>
+    parseInt(localStorage.getItem("splitWidth") ?? "50")
+  );
+  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [tocWidth, setTocWidth] = useState(() =>
+    parseInt(localStorage.getItem("tocWidth") ?? "220")
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const editorActions = useEditorActions(
@@ -47,6 +56,52 @@ export default function App() {
     const title = fileName ? `${fileName} - light-md` : "light-md";
     getCurrentWindow().setTitle(title).catch(console.error);
   }, [tabs.activeFilePath]);
+
+  // セッション復元（前回開いていたタブ）
+  useEffect(() => {
+    const raw = localStorage.getItem("session_tabs");
+    const savedActive = localStorage.getItem("session_activeFilePath") ?? "";
+    if (!raw) return;
+    let savedTabs: { filePath: string }[];
+    try { savedTabs = JSON.parse(raw); } catch { return; }
+    if (!Array.isArray(savedTabs) || savedTabs.length === 0) return;
+
+    (async () => {
+      let firstTab = true;
+      let targetId: string | undefined;
+      for (const { filePath } of savedTabs) {
+        try {
+          const content = await readTextFile(filePath);
+          if (firstTab) {
+            firstTab = false;
+            const active = tabsRef.current.tabs.find((t) => t.id === tabsRef.current.activeId)!;
+            if (active.filePath === null && active.content === "") {
+              tabsRef.current.openFileInTab(filePath, content, active.id);
+              if (filePath === savedActive) targetId = active.id;
+              continue;
+            }
+          }
+          tabsRef.current.newTab();
+          const newId = tabsRef.current.activeId;
+          tabsRef.current.openFileInTab(filePath, content, newId);
+          if (filePath === savedActive) targetId = newId;
+        } catch {
+          // ファイルが移動・削除されていればスキップ
+        }
+      }
+      if (targetId) tabsRef.current.switchTab(targetId);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // セッション保存（タブ変化のたび）
+  useEffect(() => {
+    const toSave = tabs.tabs
+      .filter((t) => t.filePath !== null)
+      .map((t) => ({ filePath: t.filePath! }));
+    localStorage.setItem("session_tabs", JSON.stringify(toSave));
+    localStorage.setItem("session_activeFilePath", tabs.activeFilePath ?? "");
+  }, [tabs.tabs, tabs.activeFilePath]);
 
   // ウィンドウサイズの復元
   useEffect(() => {
@@ -111,6 +166,32 @@ export default function App() {
     await writeTextFile(targetPath, tabsRef.current.activeContent);
     tabsRef.current.setActiveFilePath(targetPath);
     tabsRef.current.setActiveSaveState("saved");
+  }, []);
+
+  const handleCloseOtherTabs = useCallback(async (id: string) => {
+    const unsaved = tabsRef.current.tabs.filter(
+      (t) => t.id !== id && t.saveState === "unsaved"
+    );
+    if (unsaved.length > 0) {
+      const ok = await confirm(
+        `未保存のファイルが ${unsaved.length} 件あります。閉じますか？`,
+        { title: "確認", kind: "warning" }
+      );
+      if (!ok) return;
+    }
+    tabsRef.current.closeOtherTabs(id);
+  }, []);
+
+  const handleCloseAllTabs = useCallback(async () => {
+    const unsaved = tabsRef.current.tabs.filter((t) => t.saveState === "unsaved");
+    if (unsaved.length > 0) {
+      const ok = await confirm(
+        `未保存のファイルが ${unsaved.length} 件あります。すべて閉じますか？`,
+        { title: "確認", kind: "warning" }
+      );
+      if (!ok) return;
+    }
+    tabsRef.current.closeAllTabs();
   }, []);
 
   const handleCloseTab = useCallback(async (id: string) => {
@@ -223,6 +304,18 @@ export default function App() {
         onThemeToggle={() => setIsDark((d) => !d)}
         isExplorerOpen={isExplorerOpen}
         onExplorerToggle={() => setIsExplorerOpen((v) => !v)}
+        isSplitPreview={isSplitPreview}
+        onSplitPreviewToggle={() => {
+          if (!isSplitPreview) {
+            const available = window.innerWidth - (isExplorerOpen ? sidebarWidth + 4 : 0);
+            const half = Math.floor(available / 2);
+            setSplitWidth(half);
+            localStorage.setItem("splitWidth", String(half));
+          }
+          setIsSplitPreview((v) => !v);
+        }}
+        isTocOpen={isTocOpen}
+        onTocToggle={() => setIsTocOpen((v) => !v)}
       />
       <TabBar
         tabs={tabs.tabs}
@@ -230,6 +323,8 @@ export default function App() {
         onNew={tabs.newTab}
         onSwitch={tabs.switchTab}
         onClose={handleCloseTab}
+        onCloseOthers={handleCloseOtherTabs}
+        onCloseAll={handleCloseAllTabs}
       />
       <div className="flex flex-1 overflow-hidden">
         {isExplorerOpen && (
@@ -256,25 +351,78 @@ export default function App() {
           </>
         )}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {mode === "edit" && (
-            <>
-              <Toolbar actions={editorActions} />
+          {mode === "edit" && <Toolbar actions={editorActions} />}
+          <div className="flex flex-1 overflow-hidden">
+            {mode === "edit" && (
               <Editor
                 ref={textareaRef}
                 value={tabs.activeContent}
                 onChange={tabs.setActiveContent}
                 onProgrammaticChange={tabs.setActiveContentImmediate}
                 onImagePaste={tabs.activeFilePath ? handleImagePaste : undefined}
+                style={isSplitPreview ? { width: splitWidth, flexShrink: 0 } : undefined}
               />
-            </>
-          )}
-          {mode === "preview" && (
-            <Preview
-              markdown={tabs.activeContent}
-              filePath={tabs.activeFilePath}
-              isDark={isDark}
-            />
-          )}
+            )}
+            {mode === "edit" && isSplitPreview && (
+              <>
+                <div
+                  className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-400 active:bg-blue-500"
+                  onMouseDown={(e) => {
+                    const startX = e.clientX;
+                    const startW = splitWidth;
+                    const onMove = (ev: MouseEvent) => {
+                      const w = Math.min(window.innerWidth - 200, Math.max(200, startW + ev.clientX - startX));
+                      setSplitWidth(w);
+                      localStorage.setItem("splitWidth", String(w));
+                    };
+                    const onUp = () => {
+                      window.removeEventListener("mousemove", onMove);
+                      window.removeEventListener("mouseup", onUp);
+                    };
+                    window.addEventListener("mousemove", onMove);
+                    window.addEventListener("mouseup", onUp);
+                  }}
+                />
+                <div className="flex-1 overflow-hidden">
+                  <Preview
+                    markdown={tabs.activeContent}
+                    filePath={tabs.activeFilePath}
+                    isDark={isDark}
+                  />
+                </div>
+              </>
+            )}
+            {mode === "preview" && (
+              <Preview
+                markdown={tabs.activeContent}
+                filePath={tabs.activeFilePath}
+                isDark={isDark}
+              />
+            )}
+            {mode === "preview" && isTocOpen && (
+              <>
+                <div
+                  className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-400 active:bg-blue-500"
+                  onMouseDown={(e) => {
+                    const startX = e.clientX;
+                    const startW = tocWidth;
+                    const onMove = (ev: MouseEvent) => {
+                      const w = Math.min(480, Math.max(160, startW - (ev.clientX - startX)));
+                      setTocWidth(w);
+                      localStorage.setItem("tocWidth", String(w));
+                    };
+                    const onUp = () => {
+                      window.removeEventListener("mousemove", onMove);
+                      window.removeEventListener("mouseup", onUp);
+                    };
+                    window.addEventListener("mousemove", onMove);
+                    window.addEventListener("mouseup", onUp);
+                  }}
+                />
+                <TocSidebar markdown={tabs.activeContent} width={tocWidth} />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
