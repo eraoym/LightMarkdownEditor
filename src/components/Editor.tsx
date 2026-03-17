@@ -4,10 +4,11 @@ interface EditorProps {
   value: string;
   onChange: (value: string) => void;
   onProgrammaticChange: (value: string) => void;
+  onImagePaste?: (blob: Blob, start: number, end: number) => void;
 }
 
 const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
-  { value, onChange, onProgrammaticChange },
+  { value, onChange, onProgrammaticChange, onImagePaste },
   ref
 ) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -61,6 +62,20 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
     }
   }
 
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    if (!onImagePaste) return;
+    const imageItem = Array.from(e.clipboardData.items).find((item) =>
+      item.type.startsWith("image/")
+    );
+    if (!imageItem) return;
+    const blob = imageItem.getAsFile();
+    if (!blob) return;
+    e.preventDefault();
+    const start = e.currentTarget.selectionStart;
+    const end = e.currentTarget.selectionEnd;
+    onImagePaste(blob, start, end);
+  }
+
   return (
     <textarea
       ref={ref}
@@ -68,6 +83,7 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
       placeholder="Markdown を入力..."
       spellCheck={false}
     />

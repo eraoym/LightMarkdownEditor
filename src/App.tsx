@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open, save, confirm } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile, writeTextFile, writeFile, mkdir } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import Header from "./components/Header";
 import Editor from "./components/Editor";
@@ -126,6 +126,35 @@ export default function App() {
     tabsRef.current.closeTab(id);
   }, []);
 
+  const handleImagePaste = useCallback(async (blob: Blob, start: number, end: number) => {
+    const filePath = tabsRef.current.activeFilePath;
+    if (!filePath) return;
+
+    const dir = filePath.replace(/[/\\][^/\\]*$/, "");
+    const sep = filePath.includes("\\") ? "\\" : "/";
+    const imageDir = dir + sep + "image";
+    const ext = blob.type.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
+    const filename = `paste-${Date.now()}.${ext}`;
+    const imagePath = imageDir + sep + filename;
+
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    await mkdir(imageDir, { recursive: true });
+    await writeFile(imagePath, bytes);
+
+    const insertText = `![${filename}](image/${filename})`;
+    const current = tabsRef.current.activeContent;
+    const newContent = current.slice(0, start) + insertText + current.slice(end);
+    tabsRef.current.setActiveContentImmediate(newContent);
+
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        const pos = start + insertText.length;
+        textareaRef.current.setSelectionRange(pos, pos);
+        textareaRef.current.focus();
+      }
+    });
+  }, []);
+
   const handleOpenFileFromExplorer = useCallback(async (path: string) => {
     const existingId = tabsRef.current.findTabByPath(path);
     if (existingId) {
@@ -235,6 +264,7 @@ export default function App() {
                 value={tabs.activeContent}
                 onChange={tabs.setActiveContent}
                 onProgrammaticChange={tabs.setActiveContentImmediate}
+                onImagePaste={tabs.activeFilePath ? handleImagePaste : undefined}
               />
             </>
           )}
