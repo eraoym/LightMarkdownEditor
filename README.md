@@ -1,8 +1,48 @@
 # Light Markdown Editor
 
-「今すぐ書いて、すぐ見れる」をコンセプトにした、シンプルなデスクトップ向け Markdown エディタ。
+「今すぐ書いて、すぐ見れる」をコンセプトにした、軽量なデスクトップ向け Markdown エディタ。
 
-Tauri v2 + React 19 + TypeScript で構築されています。
+Tauri v2 + React 19 + TypeScript で構築。
+
+---
+
+## リリースノート
+
+### v0.2.0 — 2026-03-17
+
+#### Added
+
+- **設定モーダル** — エディタのフォントサイズ・フォントファミリー・タブ幅を変更可能。設定は localStorage に永続化
+- **シンタックスハイライト** — `highlight.js` によるコードブロックのハイライト表示（`hljs-theme.css`）
+- **スプリットプレビュー** — 編集モードでエディタとプレビューを横並び表示。境界線をドラッグして幅を調整可能（幅は localStorage に永続化）
+- **TOC サイドバー** — プレビューモードで目次を表示。見出しをクリックしてスクロールジャンプ
+- **セッション復元** — 起動時に前回開いていたタブ・エクスプローラーのフォルダを自動復元
+- **タブ右クリックメニュー** —「タブを閉じる」「他のタブをすべて閉じる」「すべてのタブを閉じる」
+- **Mermaid ダイアグラム** — コードブロックでダイアグラムをレンダリング
+- **画像ペースト** — クリップボードから画像をファイルに保存してリンクを自動挿入
+- **アプリアイコン** — iOS / Android / Windows 向けアイコン一式を刷新
+
+#### Changed
+
+- `Editor` のタブ幅を設定から動的に変更可能に
+- フォントサイズをエディタ設定で上書き可能に
+
+---
+
+### v0.1.0 — 2025-03-16
+
+#### Added
+
+- **Markdown エディタ** — Edit / Preview モード切替、リアルタイムプレビュー
+- **ファイルタブ** — 複数ファイルをタブで管理。未保存インジケーター（●）表示
+- **エクスプローラーサイドバー** — フォルダツリーからファイルを開く。遅延展開対応
+- **ツールバー** — Bold / Italic / H1-H3 / 箇条書き / 番号リスト / コード挿入ボタン
+- **Undo/Redo** — タブごとに独立した履歴（最大200エントリ、500msデバウンス）
+- **ファイル操作** — 開く・上書き保存（Ctrl+S）・名前を付けて保存
+- **キーボードショートカット** — Ctrl+B（太字）、Ctrl+I（斜体）、Ctrl+Z/Y（Undo/Redo）、Ctrl+Tab（タブ切替）
+- **ダークモード** — OS テーマ連動 + ヘッダーボタンによる手動切替
+- **Tab インデント** — Tab キーでスペース挿入、Shift+Tab で削除
+- **括弧自動補完** — `(` `[` `{` `` ` `` `"` `'` 入力時に閉じ括弧を自動挿入
 
 ---
 
@@ -10,12 +50,19 @@ Tauri v2 + React 19 + TypeScript で構築されています。
 
 | 機能 | 説明 |
 | --- | --- |
-| 新規作成 | 起動時に空の編集画面を表示 |
-| ファイルを開く | OS のファイルダイアログで `.md` ファイルを選択して読み込む |
-| リアルタイムプレビュー | EditMode / PreviewMode をヘッダーのトグルで切り替え |
-| 上書き保存 | `Ctrl+S` で現在開いているファイルに保存 |
-| 名前を付けて保存 | 新規ファイルの初回保存時はダイアログで保存先を指定 |
-| ダークモード | OS のライト/ダークテーマに自動連動 |
+| ファイル操作 | 開く・上書き保存（Ctrl+S）・名前を付けて保存 |
+| ファイルタブ | 複数ファイルをタブで管理、未保存インジケーター表示 |
+| エクスプローラー | フォルダツリーからファイルを開く |
+| Markdown プレビュー | Edit / Preview / Split（横並び）モードを切替 |
+| TOC サイドバー | 見出し一覧を表示、クリックでジャンプ |
+| ツールバー | Bold / Italic / H1-H3 / リスト / コード等の書式挿入 |
+| Undo/Redo | タブごとに独立した履歴（最大200エントリ） |
+| 画像ペースト | クリップボードから画像をファイルに保存してリンク挿入 |
+| シンタックスハイライト | コードブロックのハイライト表示 |
+| Mermaid 図 | コードブロックでダイアグラムをレンダリング |
+| 設定 | エディタのフォントサイズ・フォントファミリー・タブ幅 |
+| ダークモード | OS テーマ連動 + 手動切替 |
+| セッション復元 | 前回開いていたタブ・フォルダを起動時に自動復元 |
 
 ---
 
@@ -26,8 +73,10 @@ Tauri v2 + React 19 + TypeScript で構築されています。
 | デスクトップフレームワーク | Tauri v2 |
 | フロントエンド | React 19 + TypeScript 5.8 |
 | ビルドツール | Vite 7 |
-| CSS | Tailwind CSS v4（`@tailwindcss/vite` 経由） |
+| CSS | Tailwind CSS v4 |
 | Markdown レンダリング | `react-markdown` + `remark-gfm` |
+| シンタックスハイライト | `highlight.js` |
+| ダイアグラム | `mermaid` |
 | パッケージマネージャ | pnpm |
 | バックエンド | Rust (edition 2021) |
 
@@ -44,28 +93,25 @@ Tauri v2 + React 19 + TypeScript で構築されています。
 ### インストール
 
 ```bash
-# 依存パッケージをインストール
 pnpm install
 ```
-
-> node_modules の状態がおかしい場合は `CI=true pnpm install` を使う（[troubleshooting](#トラブルシューティング) 参照）。
 
 ---
 
 ## 開発・ビルド
 
 ```bash
-# Tauri 開発モード（Vite dev server + Rust ビルドが同時起動）
+# 開発モード（Vite dev server + Rust ビルド）
 pnpm tauri dev
 
-# フロントエンドのみ確認（ブラウザで http://localhost:1420）
+# フロントエンドのみ（ブラウザで http://localhost:1420）
 pnpm dev
 
-# プロダクションビルド（src-tauri/target/release/bundle/ にインストーラが生成）
+# プロダクションビルド（src-tauri/target/release/bundle/ にインストーラ生成）
 pnpm tauri build
 ```
 
-> 初回の `pnpm tauri dev` は Rust クレートのコンパイルに数分かかります。2回目以降はキャッシュにより高速です。
+> 初回の `pnpm tauri dev` は Rust クレートのコンパイルに数分かかります。
 
 ---
 
@@ -73,24 +119,30 @@ pnpm tauri build
 
 ```text
 LightMarkdownEditor/
-├── src/                     # フロントエンド（React/TypeScript）
-│   ├── main.tsx
-│   ├── App.tsx              # 状態管理・キーボードショートカット・Tauri 呼び出し
+├── src/                      # フロントエンド（React/TypeScript）
+│   ├── App.tsx               # 状態管理・キーボードショートカット
 │   ├── components/
-│   │   ├── Header.tsx       # 「開く」ボタン、ファイル名、保存状態、モード切替
-│   │   ├── Editor.tsx       # textarea（EditMode）
-│   │   └── Preview.tsx      # react-markdown（PreviewMode）
-│   └── index.css
-├── src-tauri/               # バックエンド（Rust / Tauri）
-│   ├── src/
-│   │   ├── main.rs
-│   │   └── lib.rs
+│   │   ├── Header.tsx        # ヘッダー・モード切替・設定ボタン
+│   │   ├── Editor.tsx        # textarea エディタ
+│   │   ├── Preview.tsx       # Markdown レンダリング
+│   │   ├── Toolbar.tsx       # 書式挿入ツールバー
+│   │   ├── TabBar.tsx        # ファイルタブ
+│   │   ├── Explorer.tsx      # フォルダツリー
+│   │   ├── TocSidebar.tsx    # 目次サイドバー
+│   │   └── SettingsModal.tsx # 設定モーダル
+│   ├── hooks/
+│   │   ├── useTabs.ts
+│   │   ├── useEditorActions.ts
+│   │   └── useHistory.ts
+│   ├── styles/
+│   │   └── hljs-theme.css    # シンタックスハイライトテーマ
+│   └── types.ts
+├── src-tauri/                # バックエンド（Rust / Tauri）
+│   ├── src/lib.rs
 │   ├── capabilities/
-│   │   └── default.json     # Tauri パーミッション設定
+│   │   └── default.json      # Tauri パーミッション設定
 │   └── Cargo.toml
-├── docs/                    # 設計ドキュメント
-├── index.html
-├── vite.config.ts
+├── docs/                     # 設計ドキュメント
 └── package.json
 ```
 
@@ -104,7 +156,7 @@ LightMarkdownEditor/
 ERR_PNPM_UNEXPECTED_VIRTUAL_STORE
 ```
 
-プロジェクトのディレクトリ構造を変更した後に発生することがある。以下で解決する。
+プロジェクトのディレクトリを移動した後などに発生する。以下で解決する。
 
 ```bash
 CI=true pnpm install
@@ -112,36 +164,18 @@ CI=true pnpm install
 
 ### Tailwind CSS v4 の設定
 
-v4 では `tailwind.config.js` / `postcss.config.js` は**不要**。`vite.config.ts` に `@tailwindcss/vite` プラグインを追加し、`index.css` に `@import "tailwindcss";` を記述するだけでよい。
+v4 では `tailwind.config.js` / `postcss.config.js` は不要。`vite.config.ts` に `@tailwindcss/vite` プラグインを追加し、`index.css` に `@import "tailwindcss";` を記述するだけでよい。
 
 ### tauri.conf.json と vite.config.ts のポート不一致
 
-`devUrl`（tauri.conf.json）と `server.port`（vite.config.ts）は同じ値（デフォルト: `1420`）に揃える必要がある。変更する場合は両方を同時に変更すること。
-
-### CI 環境・非対話型ターミナルでの pnpm エラー
-
-```text
-ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
-```
-
-先頭に `CI=true` を付けて実行する。
-
-```bash
-CI=true pnpm install
-```
+`devUrl`（tauri.conf.json）と `server.port`（vite.config.ts）は同じ値（デフォルト: `1420`）に揃える。
 
 ---
 
 ## ドキュメント
 
-詳細は [docs/](docs/) を参照してください。
-
 | ファイル | 内容 |
 | --- | --- |
 | [docs/01_concept.md](docs/01_concept.md) | MVPコンセプト・要件定義 |
-| [docs/02_frontend.md](docs/02_frontend.md) | フロントエンド設計（React + Tailwind） |
-| [docs/03_backend.md](docs/03_backend.md) | バックエンド設計（Tauri ファイル操作） |
-| [docs/architecture.md](docs/architecture.md) | プロジェクト構成・技術スタック |
-| [docs/setup_guide.md](docs/setup_guide.md) | 環境構築手順（Windows 11） |
+| [docs/02_frontend.md](docs/02_frontend.md) | フロントエンド設計 |
 | [docs/status.md](docs/status.md) | 実装状況 |
-| [docs/troubleshooting.md](docs/troubleshooting.md) | トラブルシューティング詳細 |
