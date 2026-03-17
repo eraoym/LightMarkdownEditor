@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-16（タブ + エクスプローラーサイドバー追加）
+> 最終更新: 2026-03-17（mermaid対応、画像表示、バイナリ非表示、サイドバーリサイズ追加）
 
 ---
 
@@ -22,7 +22,9 @@
 
 - ヘッダー左端に `☰` でエクスプローラーサイドバーのトグル
 - タブバーで複数ファイルを同時編集可能
-- エクスプローラーは左サイドバー（幅 `w-48` 固定）、`☰` でトグル
+- エクスプローラーは左サイドバー（幅可変、初期 192px、min 160px / max 480px）、`☰` でトグル
+- サイドバーとメインコンテンツの間にドラッグハンドルでリサイズ可能（幅は localStorage 永続化）
+- ウィンドウサイズも localStorage に保存し、起動時に復元
 
 ---
 
@@ -42,6 +44,7 @@ Tailwind v4 クラスベースのダークモード（`@custom-variant dark (&:w
 | --- | --- | --- |
 | `react-markdown` | Markdown → React コンポーネントへの変換 | `pnpm add react-markdown` |
 | `remark-gfm` | GitHub Flavored Markdown（テーブル、チェックボックスなど）の対応 | `pnpm add remark-gfm` |
+| `mermaid` | mermaid コードブロックのダイアグラム描画 | `pnpm add mermaid` |
 
 > `react-markdown` は `dangerouslySetInnerHTML` を使わずに安全にレンダリングできるため採用。
 
@@ -103,10 +106,12 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | Props | 型 | 説明 |
 | --- | --- | --- |
 | `onOpenFile` | `(path: string) => void` | ファイルクリック時のハンドラ |
+| `width` | `number` | サイドバー幅（px）|
 
 - フォルダ選択ボタン → `readDir` でツリー表示
 - フォルダクリック → 遅延展開/折り畳み
 - ファイルクリック → `onOpenFile` を呼び出し
+- `width` props で動的幅対応（App から渡す、`style={{ width }}` で適用）
 
 ### Toolbar
 
@@ -145,6 +150,12 @@ Editor の追加機能:
 | Props | 型 | 説明 |
 | --- | --- | --- |
 | `markdown` | `string` | レンダリング対象の Markdown テキスト |
+| `filePath` | `string \| null` | 現在開いているファイルパス（相対パス画像の解決に使用） |
+| `isDark` | `boolean` | mermaid テーマの切替に使用 |
+
+- `img` カスタムレンダラーで相対パス画像を `readFile` + base64 変換してレンダリング
+- `code` カスタムレンダラーで `language-mermaid` ブロックを `MermaidDiagram` コンポーネントで描画
+- バイナリファイルは `TEXT_EXTENSIONS` ホワイトリストで弾き、「表示できません」メッセージを表示（App.tsx で制御）
 
 ---
 

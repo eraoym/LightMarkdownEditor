@@ -19,6 +19,10 @@
       "allow": [{ "path": "**" }]
     },
     "fs:allow-exists",
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "**" }]
+    },
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-confirm"

@@ -12,6 +12,7 @@ interface TreeNode {
 
 interface ExplorerProps {
   onOpenFile: (path: string) => void;
+  width: number;
 }
 
 async function loadChildren(dirPath: string): Promise<TreeNode[]> {
@@ -56,7 +57,7 @@ function updateNodeExpanded(
   });
 }
 
-export default function Explorer({ onOpenFile }: ExplorerProps) {
+export default function Explorer({ onOpenFile, width }: ExplorerProps) {
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [tree, setTree] = useState<TreeNode[]>([]);
 
@@ -107,7 +108,8 @@ export default function Explorer({ onOpenFile }: ExplorerProps) {
   };
 
   return (
-    <div className="w-48 shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 overflow-hidden">
+    <div className="shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 overflow-hidden" style={{ width }}>
+
       <div className="px-2 py-1 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
         <button
           onClick={handleSelectFolder}

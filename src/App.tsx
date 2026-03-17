@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open, save, confirm } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import Header from "./components/Header";
 import Editor from "./components/Editor";
 import Preview from "./components/Preview";
@@ -11,6 +11,12 @@ import Explorer from "./components/Explorer";
 import { useEditorActions } from "./hooks/useEditorActions";
 import { useTabs } from "./hooks/useTabs";
 import type { Mode } from "./types";
+
+const TEXT_EXTENSIONS = new Set([
+  "md", "txt", "json", "yaml", "yml", "toml", "csv",
+  "ts", "tsx", "js", "jsx", "html", "css", "xml", "log",
+  "ini", "conf", "sh", "bat",
+]);
 
 export default function App() {
   const tabs = useTabs();
@@ -22,6 +28,9 @@ export default function App() {
     window.matchMedia("(prefers-color-scheme: dark)").matches
   );
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() =>
+    parseInt(localStorage.getItem("sidebarWidth") ?? "192")
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const editorActions = useEditorActions(
@@ -38,6 +47,27 @@ export default function App() {
     const title = fileName ? `${fileName} - light-md` : "light-md";
     getCurrentWindow().setTitle(title).catch(console.error);
   }, [tabs.activeFilePath]);
+
+  // ウィンドウサイズの復元
+  useEffect(() => {
+    const savedW = parseInt(localStorage.getItem("windowWidth") ?? "0");
+    const savedH = parseInt(localStorage.getItem("windowHeight") ?? "0");
+    if (savedW > 0 && savedH > 0) {
+      getCurrentWindow().setSize(new LogicalSize(savedW, savedH)).catch(console.error);
+    }
+  }, []);
+
+  // ウィンドウサイズの保存
+  useEffect(() => {
+    const onResize = () => {
+      getCurrentWindow().innerSize().then((size) => {
+        localStorage.setItem("windowWidth", String(size.width));
+        localStorage.setItem("windowHeight", String(size.height));
+      }).catch(console.error);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const handleOpen = useCallback(async () => {
     const selected = await open({
@@ -102,7 +132,13 @@ export default function App() {
       tabsRef.current.switchTab(existingId);
       return;
     }
-    const content = await readTextFile(path);
+
+    const ext = path.split(".").pop()?.toLowerCase() ?? "";
+    const fileName = path.split(/[\\/]/).pop() ?? path;
+    const content = TEXT_EXTENSIONS.has(ext)
+      ? await readTextFile(path)
+      : `> このファイルは表示できません: \`${fileName}\``;
+
     const active = tabsRef.current.tabs.find(
       (t) => t.id === tabsRef.current.activeId
     )!;
@@ -167,9 +203,29 @@ export default function App() {
         onClose={handleCloseTab}
       />
       <div className="flex flex-1 overflow-hidden">
-        <div className={isExplorerOpen ? "" : "hidden"}>
-          <Explorer onOpenFile={handleOpenFileFromExplorer} />
-        </div>
+        {isExplorerOpen && (
+          <>
+            <Explorer onOpenFile={handleOpenFileFromExplorer} width={sidebarWidth} />
+            <div
+              className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-400 active:bg-blue-500"
+              onMouseDown={(e) => {
+                const startX = e.clientX;
+                const startW = sidebarWidth;
+                const onMove = (ev: MouseEvent) => {
+                  const w = Math.min(480, Math.max(160, startW + ev.clientX - startX));
+                  setSidebarWidth(w);
+                  localStorage.setItem("sidebarWidth", String(w));
+                };
+                const onUp = () => {
+                  window.removeEventListener("mousemove", onMove);
+                  window.removeEventListener("mouseup", onUp);
+                };
+                window.addEventListener("mousemove", onMove);
+                window.addEventListener("mouseup", onUp);
+              }}
+            />
+          </>
+        )}
         <div className="flex flex-col flex-1 overflow-hidden">
           {mode === "edit" && (
             <>
@@ -182,7 +238,13 @@ export default function App() {
               />
             </>
           )}
-          {mode === "preview" && <Preview markdown={tabs.activeContent} />}
+          {mode === "preview" && (
+            <Preview
+              markdown={tabs.activeContent}
+              filePath={tabs.activeFilePath}
+              isDark={isDark}
+            />
+          )}
         </div>
       </div>
     </div>
