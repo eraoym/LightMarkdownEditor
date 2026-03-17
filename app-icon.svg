@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- 背景グラデーション: ディープネイビー -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <!-- L のアクセントカラー: スカイブルー -->
+    <linearGradient id="lgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#7dd3fc"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <!-- M のカラー: ホワイト寄り -->
+    <linearGradient id="mgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <!-- 内側シャドウ用フィルタ -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur"/>
+      <feFlood flood-color="#38bdf8" flood-opacity="0.3" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- 上部ハイライト (ガラス感) -->
+  <rect x="0" y="0" width="512" height="220" rx="96" fill="white" opacity="0.04"/>
+
+  <!-- ===== L 文字 (ジオメトリック) ===== -->
+  <!-- 縦棒 -->
+  <rect x="72"  y="108" width="76" height="256" fill="url(#lgrad)" filter="url(#glow)"/>
+  <!-- 横棒 -->
+  <rect x="72"  y="304" width="196" height="76"  fill="url(#lgrad)" filter="url(#glow)"/>
+
+  <!-- ===== M 文字 (ジオメトリック、Lと重なり) ===== -->
+  <!-- 左縦棒 -->
+  <rect x="232" y="108" width="62" height="256" fill="url(#mgrad)" opacity="0.92"/>
+  <!-- 右縦棒 -->
+  <rect x="376" y="108" width="62" height="256" fill="url(#mgrad)" opacity="0.92"/>
+  <!-- 左斜め (▼ 左側: 左上→中央下) -->
+  <polygon
+    points="232,108  294,108  339,232  294,232"
+    fill="url(#mgrad)" opacity="0.92"/>
+  <!-- 右斜め (▼ 右側: 右上→中央下) -->
+  <polygon
+    points="376,108  438,108  376,108  339,232  376,232"
+    fill="url(#mgrad)" opacity="0.92"/>
+
+  <!-- 重なり部分の L 横棒を M 左縦棒の上に再描画して視覚的な前後関係を演出 -->
+  <!-- (M が手前、L が奥のレイヤー感) -->
+  <!-- M 左縦棒下部の重なりを少し暗くしてデプス表現 -->
+  <rect x="232" y="304" width="36" height="76" rx="0" fill="#0f172a" opacity="0.25"/>
+</svg>

@@ -6,10 +6,13 @@ interface EditorProps {
   onProgrammaticChange: (value: string) => void;
   onImagePaste?: (blob: Blob, start: number, end: number) => void;
   style?: React.CSSProperties;
+  fontSize?: number;
+  fontFamily?: string;
+  tabWidth?: number;
 }
 
 const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
-  { value, onChange, onProgrammaticChange, onImagePaste, style },
+  { value, onChange, onProgrammaticChange, onImagePaste, style, fontSize, fontFamily, tabWidth = 2 },
   ref
 ) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -19,14 +22,15 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
 
     if (e.key === "Tab" && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
+      const indent = " ".repeat(tabWidth);
       if (e.shiftKey) {
-        // Shift+Tab: 行頭のスペース2個削除
+        // Shift+Tab: 行頭のスペースを tabWidth 分削除
         const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-        if (value.slice(lineStart).startsWith("  ")) {
-          const newValue = value.slice(0, lineStart) + value.slice(lineStart + 2);
+        if (value.slice(lineStart).startsWith(indent)) {
+          const newValue = value.slice(0, lineStart) + value.slice(lineStart + tabWidth);
           onProgrammaticChange(newValue);
           requestAnimationFrame(() => {
-            el.setSelectionRange(Math.max(lineStart, start - 2), Math.max(lineStart, end - 2));
+            el.setSelectionRange(Math.max(lineStart, start - tabWidth), Math.max(lineStart, end - tabWidth));
           });
         } else if (value.slice(lineStart).startsWith(" ")) {
           const newValue = value.slice(0, lineStart) + value.slice(lineStart + 1);
@@ -36,11 +40,11 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
           });
         }
       } else {
-        // Tab: スペース2個挿入
-        const newValue = value.slice(0, start) + "  " + value.slice(end);
+        // Tab: スペースを tabWidth 分挿入
+        const newValue = value.slice(0, start) + indent + value.slice(end);
         onProgrammaticChange(newValue);
         requestAnimationFrame(() => {
-          el.setSelectionRange(start + 2, start + 2);
+          el.setSelectionRange(start + tabWidth, start + tabWidth);
         });
       }
       return;
@@ -77,11 +81,17 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
     onImagePaste(blob, start, end);
   }
 
+  const fontStyle: React.CSSProperties = {
+    ...(style ?? { width: "100%" }),
+    fontSize: fontSize ? `${fontSize}px` : undefined,
+    fontFamily: fontFamily ?? undefined,
+  };
+
   return (
     <textarea
       ref={ref}
-      className="h-full resize-none p-4 text-sm font-mono leading-relaxed bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none"
-      style={style ?? { width: "100%" }}
+      className="h-full resize-none p-4 font-mono leading-relaxed bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none"
+      style={fontStyle}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}

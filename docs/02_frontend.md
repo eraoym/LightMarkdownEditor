@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-17（スプリットプレビュー・TOCサイドバー・セッション永続化・タブ右クリックメニュー追加）
+> 最終更新: 2026-03-17（シンタックスハイライト・設定画面 追加）
 
 ---
 
@@ -47,6 +47,7 @@ Tailwind v4 クラスベースのダークモード（`@custom-variant dark (&:w
 | `react-markdown` | Markdown → React コンポーネントへの変換 | `pnpm add react-markdown` |
 | `remark-gfm` | GitHub Flavored Markdown（テーブル、チェックボックスなど）の対応 | `pnpm add remark-gfm` |
 | `mermaid` | mermaid コードブロックのダイアグラム描画 | `pnpm add mermaid` |
+| `highlight.js` | コードブロックのシンタックスハイライト | `pnpm add highlight.js` |
 
 > `react-markdown` は `dangerouslySetInnerHTML` を使わずに安全にレンダリングできるため採用。
 
@@ -56,7 +57,7 @@ Tailwind v4 クラスベースのダークモード（`@custom-variant dark (&:w
 
 ```text
 App
-├── Header          ← ☰ ボタン、「開く」ボタン、Split/TOC トグル、モード切替、テーマ切替ボタン
+├── Header          ← ☰ ボタン、「開く」ボタン、Split/TOC トグル、モード切替、⚙/テーマ切替ボタン
 ├── TabBar          ← タブ一覧（+/×/未保存●）
 ├── div.flex
 │   ├── Explorer    ← エクスプローラーサイドバー（☰ トグル）
@@ -65,9 +66,10 @@ App
 │       └── div.flex
 │           ├── Editor      ← textarea（EditMode 時）
 │           ├── [divider]   ← リサイズハンドル（スプリット時）
-│           ├── Preview     ← react-markdown（EditMode スプリット時 or PreviewMode 時）
+│           ├── Preview     ← react-markdown + hljs（EditMode スプリット時 or PreviewMode 時）
 │           ├── [divider]   ← リサイズハンドル（TOC 表示時）
 │           └── TocSidebar  ← 目次サイドバー（PreviewMode + TOC ON 時）
+└── SettingsModal   ← 設定モーダル（isSettingsOpen 時）
 ```
 
 ### セッション永続化
@@ -92,6 +94,8 @@ const tabs = useTabs();
 // App ローカル状態
 const [mode, setMode] = useState<Mode>("edit");
 const [isDark, setIsDark] = useState(...);
+const [settings, setSettings] = useState<AppSettings>(...); // localStorage "app_settings" から初期化
+const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 const [isExplorerOpen, setIsExplorerOpen] = useState(false);
 const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem("sidebarWidth") ?? "192"));
 // スプリットプレビュー（編集モード時のみ有効）
@@ -120,6 +124,19 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `onSplitPreviewToggle` | `() => void` | スプリットプレビュートグルハンドラ |
 | `isTocOpen` | `boolean` | TOCサイドバー表示状態 |
 | `onTocToggle` | `() => void` | TOCサイドバートグルハンドラ |
+| `onSettingsOpen` | `() => void` | 設定モーダルを開くハンドラ |
+
+### SettingsModal
+
+| Props | 型 | 説明 |
+| --- | --- | --- |
+| `settings` | `AppSettings` | 現在の設定値 |
+| `onChange` | `(s: AppSettings) => void` | 設定変更ハンドラ |
+| `onClose` | `() => void` | モーダルを閉じるハンドラ |
+
+- `fixed inset-0 z-50` のオーバーレイ + 中央ダイアログ
+- オーバーレイクリック or ✕ボタンで閉じる
+- 設定項目: エディタフォントサイズ（スライダー 12〜20px）、フォントファミリー（セレクト）、タブ幅（2/4 ボタン）
 
 ### TabBar
 
@@ -185,10 +202,13 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `value` | `string` | 現在の Markdown テキスト |
 | `onChange` | `(v: string) => void` | テキスト変更ハンドラ |
 | `ref` | `RefObject<HTMLTextAreaElement>` | `forwardRef` で外部公開（useEditorActions が使用） |
+| `fontSize` | `number \| undefined` | エディタフォントサイズ（px）|
+| `fontFamily` | `string \| undefined` | エディタフォントファミリー |
+| `tabWidth` | `2 \| 4` | タブ幅（スペース数、デフォルト 2）|
 
 Editor の追加機能:
-- `Tab` → スペース2個挿入
-- `Shift+Tab` → 行頭のスペース2個削除
+- `Tab` → `tabWidth` 分のスペースを挿入
+- `Shift+Tab` → 行頭のスペースを `tabWidth` 分削除
 - `(` / `[` / `` ` `` → 対応する閉じ記号を自動補完
 
 ### Preview
@@ -200,7 +220,7 @@ Editor の追加機能:
 | `isDark` | `boolean` | mermaid テーマの切替に使用 |
 
 - `img` カスタムレンダラーで相対パス画像を `readFile` + base64 変換してレンダリング
-- `code` カスタムレンダラーで `language-mermaid` ブロックを `MermaidDiagram` コンポーネントで描画
+- `code` カスタムレンダラーで `language-mermaid` は `MermaidDiagram` で描画、それ以外のコードブロックは `highlight.js` でシンタックスハイライト
 - バイナリファイルは `TEXT_EXTENSIONS` ホワイトリストで弾き、「表示できません」メッセージを表示（App.tsx で制御）
 
 ---
@@ -335,19 +355,22 @@ export function useEditorActions(
 
 ```text
 src/
-├── types.ts              # 共通型: TabData, SaveState, Mode
+├── types.ts              # 共通型: TabData, SaveState, Mode, AppSettings, DEFAULT_SETTINGS
 ├── App.tsx               # 状態管理・キーボードショートカット・Tauri 呼び出し
 ├── components/
-│   ├── Header.tsx        # ☰ / Split / TOC トグルボタン追加
+│   ├── Header.tsx        # ☰ / Split / TOC / ⚙ トグルボタン
 │   ├── TabBar.tsx        # タブバー UI
 │   ├── Explorer.tsx      # エクスプローラーサイドバー
-│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（style props 対応）
+│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（fontSize/fontFamily/tabWidth props 対応）
 │   ├── Toolbar.tsx       # フォーマットツールバー
-│   ├── Preview.tsx
+│   ├── Preview.tsx       # highlight.js によるシンタックスハイライト統合
+│   ├── SettingsModal.tsx # 設定モーダル（フォントサイズ・フォント・タブ幅）
 │   └── TocSidebar.tsx    # 目次サイドバー（PreviewMode 用）
 ├── hooks/
 │   ├── useTabs.ts           # 多タブ履歴管理フック
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）
 │   └── useEditorActions.ts  # テキスト操作ロジック
-└── index.css             # @custom-variant dark 追加
+├── styles/
+│   └── hljs-theme.css    # highlight.js GitHub テーマ（ライト/ダーク）
+└── index.css             # @custom-variant dark / hljs-theme.css インポート
 ```

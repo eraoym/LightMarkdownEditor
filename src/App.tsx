@@ -9,9 +9,11 @@ import Toolbar from "./components/Toolbar";
 import TabBar from "./components/TabBar";
 import Explorer from "./components/Explorer";
 import TocSidebar from "./components/TocSidebar";
+import SettingsModal from "./components/SettingsModal";
 import { useEditorActions } from "./hooks/useEditorActions";
 import { useTabs } from "./hooks/useTabs";
-import type { Mode } from "./types";
+import type { Mode, AppSettings } from "./types";
+import { DEFAULT_SETTINGS } from "./types";
 
 const TEXT_EXTENSIONS = new Set([
   "md", "txt", "json", "yaml", "yml", "toml", "csv",
@@ -28,6 +30,15 @@ export default function App() {
   const [isDark, setIsDark] = useState(() =>
     window.matchMedia("(prefers-color-scheme: dark)").matches
   );
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    try {
+      const raw = localStorage.getItem("app_settings");
+      return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     parseInt(localStorage.getItem("sidebarWidth") ?? "192")
@@ -56,6 +67,11 @@ export default function App() {
     const title = fileName ? `${fileName} - light-md` : "light-md";
     getCurrentWindow().setTitle(title).catch(console.error);
   }, [tabs.activeFilePath]);
+
+  // 設定の localStorage 保存
+  useEffect(() => {
+    localStorage.setItem("app_settings", JSON.stringify(settings));
+  }, [settings]);
 
   // セッション復元（前回開いていたタブ）
   useEffect(() => {
@@ -316,6 +332,7 @@ export default function App() {
         }}
         isTocOpen={isTocOpen}
         onTocToggle={() => setIsTocOpen((v) => !v)}
+        onSettingsOpen={() => setIsSettingsOpen(true)}
       />
       <TabBar
         tabs={tabs.tabs}
@@ -361,6 +378,9 @@ export default function App() {
                 onProgrammaticChange={tabs.setActiveContentImmediate}
                 onImagePaste={tabs.activeFilePath ? handleImagePaste : undefined}
                 style={isSplitPreview ? { width: splitWidth, flexShrink: 0 } : undefined}
+                fontSize={settings.editorFontSize}
+                fontFamily={settings.editorFontFamily}
+                tabWidth={settings.tabWidth}
               />
             )}
             {mode === "edit" && isSplitPreview && (
@@ -425,6 +445,13 @@ export default function App() {
           </div>
         </div>
       </div>
+      {isSettingsOpen && (
+        <SettingsModal
+          settings={settings}
+          onChange={setSettings}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }

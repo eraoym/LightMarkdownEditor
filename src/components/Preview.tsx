@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { readFile } from "@tauri-apps/plugin-fs";
 import mermaid from "mermaid";
+import hljs from "highlight.js";
 import { toSlug } from "../utils/slug";
 
 interface PreviewProps {
@@ -92,10 +93,29 @@ export default function Preview({ markdown, filePath, isDark }: PreviewProps) {
         components={{
           code({ className, children }) {
             const language = className?.replace("language-", "");
+
             if (language === "mermaid") {
               return <MermaidDiagram code={String(children)} isDark={isDark} />;
             }
-            return <code className={className}>{children}</code>;
+
+            // インラインコード（className なし）はそのまま
+            if (!className) {
+              return <code>{children}</code>;
+            }
+
+            // ブロックコード: シンタックスハイライト
+            const raw = String(children).replace(/\n$/, "");
+            const lang = language && hljs.getLanguage(language) ? language : undefined;
+            const result = lang
+              ? hljs.highlight(raw, { language: lang })
+              : hljs.highlightAuto(raw);
+
+            return (
+              <code
+                className={`hljs${lang ? ` language-${lang}` : ""}`}
+                dangerouslySetInnerHTML={{ __html: result.value }}
+              />
+            );
           },
           img({ src, alt }) {
             return <ImageRenderer src={src} alt={alt} filePath={filePath} />;

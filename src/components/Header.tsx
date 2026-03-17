@@ -14,6 +14,7 @@ interface HeaderProps {
   onSplitPreviewToggle: () => void;
   isTocOpen: boolean;
   onTocToggle: () => void;
+  onSettingsOpen: () => void;
 }
 
 export default function Header({
@@ -30,6 +31,7 @@ export default function Header({
   onSplitPreviewToggle,
   isTocOpen,
   onTocToggle,
+  onSettingsOpen,
 }: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
@@ -91,6 +93,13 @@ export default function Header({
           TOC
         </button>
       )}
+      <button
+        onClick={onSettingsOpen}
+        title="設定"
+        className="text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      >
+        ⚙
+      </button>
       <button
         onClick={onThemeToggle}
         title={isDark ? "ライトモードに切替" : "ダークモードに切替"}
