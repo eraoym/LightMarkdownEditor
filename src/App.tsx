@@ -39,7 +39,7 @@ export default function App() {
     }
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+  const [isExplorerOpen, setIsExplorerOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     parseInt(localStorage.getItem("sidebarWidth") ?? "192")
   );
@@ -52,6 +52,8 @@ export default function App() {
     parseInt(localStorage.getItem("tocWidth") ?? "220")
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement | null>(null);
+  const isSyncingScroll = useRef(false);
 
   const editorActions = useEditorActions(
     textareaRef,
@@ -139,6 +141,39 @@ export default function App() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // スプリット時のスクロール同期
+  useEffect(() => {
+    if (!isSplitPreview) return;
+    const editor = textareaRef.current;
+    const preview = previewScrollRef.current;
+    if (!editor || !preview) return;
+
+    const onEditorScroll = () => {
+      if (isSyncingScroll.current) return;
+      isSyncingScroll.current = true;
+      const max = editor.scrollHeight - editor.clientHeight;
+      if (max > 0)
+        preview.scrollTop = (editor.scrollTop / max) * (preview.scrollHeight - preview.clientHeight);
+      isSyncingScroll.current = false;
+    };
+
+    const onPreviewScroll = () => {
+      if (isSyncingScroll.current) return;
+      isSyncingScroll.current = true;
+      const max = preview.scrollHeight - preview.clientHeight;
+      if (max > 0)
+        editor.scrollTop = (preview.scrollTop / max) * (editor.scrollHeight - editor.clientHeight);
+      isSyncingScroll.current = false;
+    };
+
+    editor.addEventListener("scroll", onEditorScroll);
+    preview.addEventListener("scroll", onPreviewScroll);
+    return () => {
+      editor.removeEventListener("scroll", onEditorScroll);
+      preview.removeEventListener("scroll", onPreviewScroll);
+    };
+  }, [isSplitPreview]);
 
   const handleOpen = useCallback(async () => {
     const selected = await open({
@@ -409,6 +444,8 @@ export default function App() {
                     markdown={tabs.activeContent}
                     filePath={tabs.activeFilePath}
                     isDark={isDark}
+                    previewTheme={settings.previewTheme}
+                    scrollRef={previewScrollRef}
                   />
                 </div>
               </>
@@ -418,6 +455,7 @@ export default function App() {
                 markdown={tabs.activeContent}
                 filePath={tabs.activeFilePath}
                 isDark={isDark}
+                previewTheme={settings.previewTheme}
               />
             )}
             {mode === "preview" && isTocOpen && (

@@ -1,0 +1,41 @@
+/* Minimal テーマ: 無彩色・装飾なし */
+
+/* ライトモード */
+.prose {
+  --tw-prose-body: #374151;
+  --tw-prose-headings: #111827;
+  --tw-prose-lead: #6b7280;
+  --tw-prose-links: #374151;
+  --tw-prose-bold: #111827;
+  --tw-prose-counters: #9ca3af;
+  --tw-prose-bullets: #d1d5db;
+  --tw-prose-hr: #e5e7eb;
+  --tw-prose-quotes: #6b7280;
+  --tw-prose-quote-borders: #e5e7eb;
+  --tw-prose-captions: #9ca3af;
+  --tw-prose-code: #374151;
+  --tw-prose-pre-code: #374151;
+  --tw-prose-pre-bg: #f9fafb;
+  --tw-prose-th-borders: #e5e7eb;
+  --tw-prose-td-borders: #f3f4f6;
+}
+
+/* ダークモード */
+.dark .prose {
+  --tw-prose-body: #d1d5db;
+  --tw-prose-headings: #f9fafb;
+  --tw-prose-lead: #9ca3af;
+  --tw-prose-links: #d1d5db;
+  --tw-prose-bold: #f9fafb;
+  --tw-prose-counters: #9ca3af;
+  --tw-prose-bullets: #374151;
+  --tw-prose-hr: #374151;
+  --tw-prose-quotes: #9ca3af;
+  --tw-prose-quote-borders: #374151;
+  --tw-prose-captions: #9ca3af;
+  --tw-prose-code: #d1d5db;
+  --tw-prose-pre-code: #d1d5db;
+  --tw-prose-pre-bg: #111827;
+  --tw-prose-th-borders: #374151;
+  --tw-prose-td-borders: #1f2937;
+}

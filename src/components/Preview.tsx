@@ -2,14 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { readFile } from "@tauri-apps/plugin-fs";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import mermaid from "mermaid";
 import hljs from "highlight.js";
 import { toSlug } from "../utils/slug";
+import type { PreviewTheme } from "../types";
+import githubCss from "../styles/themes/github.css?raw";
+import minimalCss from "../styles/themes/minimal.css?raw";
+import academicCss from "../styles/themes/academic.css?raw";
+
+const THEME_CSS: Record<PreviewTheme, string> = {
+  github: githubCss,
+  minimal: minimalCss,
+  academic: academicCss,
+};
 
 interface PreviewProps {
   markdown: string;
   filePath: string | null;
   isDark: boolean;
+  previewTheme: PreviewTheme;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 function MermaidDiagram({ code, isDark }: { code: string; isDark: boolean }) {
@@ -82,18 +95,23 @@ function ImageRenderer({
   return <img src={resolvedSrc} alt={alt ?? ""} style={{ maxWidth: "100%" }} />;
 }
 
-function headingId(children: React.ReactNode): string {
-  const text = Array.isArray(children)
-    ? children.map((c) => (typeof c === "string" ? c : "")).join("")
-    : typeof children === "string"
-    ? children
-    : "";
-  return toSlug(text);
+function extractText(node: React.ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  if (node !== null && typeof node === "object" && "props" in node)
+    return extractText((node as React.ReactElement).props.children);
+  return "";
 }
 
-export default function Preview({ markdown, filePath, isDark }: PreviewProps) {
+function headingId(children: React.ReactNode): string {
+  return toSlug(extractText(children));
+}
+
+export default function Preview({ markdown, filePath, isDark, previewTheme, scrollRef }: PreviewProps) {
   return (
-    <div className="print-area w-full h-full overflow-y-auto p-4 prose prose-zinc dark:prose-invert max-w-none">
+    <div ref={scrollRef} className="print-area w-full h-full overflow-y-auto p-4 prose prose-zinc dark:prose-invert max-w-none">
+      <style>{THEME_CSS[previewTheme]}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -121,6 +139,19 @@ export default function Preview({ markdown, filePath, isDark }: PreviewProps) {
                 className={`hljs${lang ? ` language-${lang}` : ""}`}
                 dangerouslySetInnerHTML={{ __html: result.value }}
               />
+            );
+          },
+          a({ href, children }) {
+            return (
+              <a
+                href={href}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (href) openUrl(href).catch(console.error);
+                }}
+              >
+                {children}
+              </a>
             );
           },
           img({ src, alt }) {

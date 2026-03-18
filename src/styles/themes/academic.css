@@ -1,0 +1,41 @@
+/* Academic テーマ: 暖色系・ドキュメントスタイル */
+
+/* ライトモード */
+.prose {
+  --tw-prose-body: #3d3931;
+  --tw-prose-headings: #1e1b14;
+  --tw-prose-lead: #635e55;
+  --tw-prose-links: #1a3565;
+  --tw-prose-bold: #1e1b14;
+  --tw-prose-counters: #7a7468;
+  --tw-prose-bullets: #c8c4bc;
+  --tw-prose-hr: #d8d4cc;
+  --tw-prose-quotes: #635e55;
+  --tw-prose-quote-borders: #c8c4bc;
+  --tw-prose-captions: #7a7468;
+  --tw-prose-code: #3d3931;
+  --tw-prose-pre-code: #3d3931;
+  --tw-prose-pre-bg: #f5f4f0;
+  --tw-prose-th-borders: #d8d4cc;
+  --tw-prose-td-borders: #e8e4de;
+}
+
+/* ダークモード */
+.dark .prose {
+  --tw-prose-body: #cdc9c0;
+  --tw-prose-headings: #e8e4da;
+  --tw-prose-lead: #9c9890;
+  --tw-prose-links: #8ab4e0;
+  --tw-prose-bold: #e8e4da;
+  --tw-prose-counters: #9c9890;
+  --tw-prose-bullets: #3e3a34;
+  --tw-prose-hr: #3e3a34;
+  --tw-prose-quotes: #9c9890;
+  --tw-prose-quote-borders: #3e3a34;
+  --tw-prose-captions: #9c9890;
+  --tw-prose-code: #cdc9c0;
+  --tw-prose-pre-code: #cdc9c0;
+  --tw-prose-pre-bg: #1e1c18;
+  --tw-prose-th-borders: #3e3a34;
+  --tw-prose-td-borders: #2e2c28;
+}

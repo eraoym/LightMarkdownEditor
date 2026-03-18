@@ -3,14 +3,14 @@
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* コードブロック: ライト/ダークで背景・テキスト色を切り替え（prose-zinc のデフォルトを上書き） */
-.prose pre {
-  background-color: #f6f8fa !important; /* GitHub Light */
-  color: #24292e !important;
+
+/* スクロールバー: ライト/ダーク切替 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
-.dark .prose pre {
-  background-color: #161b22 !important; /* GitHub Dark */
-  color: #c9d1d9 !important;
+.dark * {
+  scrollbar-color: #52525b #27272a;
 }
 
 /* Mermaid: pre コンテナは透過にして SVG コンテンツだけ表示 */

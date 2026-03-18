@@ -1,16 +1,19 @@
 export type SaveState = "saved" | "unsaved" | "saving";
 export type Mode = "edit" | "preview";
+export type PreviewTheme = "github" | "minimal" | "academic";
 
 export interface AppSettings {
   editorFontSize: number;
   editorFontFamily: string;
   tabWidth: 2 | 4;
+  previewTheme: PreviewTheme;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   editorFontSize: 14,
   editorFontFamily: "ui-monospace, monospace",
   tabWidth: 2,
+  previewTheme: "github",
 };
 
 export interface TabData {

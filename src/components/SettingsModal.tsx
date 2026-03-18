@@ -1,4 +1,4 @@
-import type { AppSettings } from "../types";
+import type { AppSettings, PreviewTheme } from "../types";
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -10,6 +10,12 @@ const FONT_OPTIONS = [
   { label: "ui-monospace", value: "ui-monospace, monospace" },
   { label: "Consolas", value: "Consolas, monospace" },
   { label: "Courier New", value: "'Courier New', monospace" },
+];
+
+const PREVIEW_THEME_OPTIONS: { label: string; value: PreviewTheme }[] = [
+  { label: "GitHub", value: "github" },
+  { label: "Minimal", value: "minimal" },
+  { label: "Academic", value: "academic" },
 ];
 
 export default function SettingsModal({ settings, onChange, onClose }: SettingsModalProps) {
@@ -72,7 +78,7 @@ export default function SettingsModal({ settings, onChange, onClose }: SettingsM
         </div>
 
         {/* タブ幅 */}
-        <div className="mb-2">
+        <div className="mb-4">
           <label className="block text-sm mb-1">タブ幅</label>
           <div className="flex gap-2">
             {([2, 4] as const).map((w) => (
@@ -86,6 +92,26 @@ export default function SettingsModal({ settings, onChange, onClose }: SettingsM
                 }`}
               >
                 {w} スペース
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* プレビューテーマ */}
+        <div className="mb-2">
+          <label className="block text-sm mb-1">プレビューテーマ</label>
+          <div className="flex gap-2">
+            {PREVIEW_THEME_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => onChange({ ...settings, previewTheme: opt.value })}
+                className={`flex-1 text-sm py-1 rounded border ${
+                  settings.previewTheme === opt.value
+                    ? "bg-blue-500 text-white border-blue-500"
+                    : "border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                }`}
+              >
+                {opt.label}
               </button>
             ))}
           </div>

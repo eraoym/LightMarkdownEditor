@@ -7,12 +7,24 @@ interface Heading {
   id: string;
 }
 
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/!\[.*?\]\(.*?\)/g, "")      // 画像 → 除去
+    .replace(/\[(.+?)\]\(.*?\)/g, "$1")   // リンク → テキストのみ残す
+    .replace(/`(.+?)`/g, "$1")            // インラインコード
+    .replace(/\*\*(.+?)\*\*/g, "$1")      // 太字 **
+    .replace(/__(.+?)__/g, "$1")          // 太字 __
+    .replace(/\*(.+?)\*/g, "$1")          // 斜体 *
+    .replace(/_(.+?)_/g, "$1")            // 斜体 _
+    .trim();
+}
+
 function extractHeadings(markdown: string): Heading[] {
   const results: Heading[] = [];
   const regex = /^(#{1,6})\s+(.+)$/gm;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(markdown)) !== null) {
-    const text = match[2].trim();
+    const text = stripInlineMarkdown(match[2]);
     results.push({ level: match[1].length, text, id: toSlug(text) });
   }
   return results;

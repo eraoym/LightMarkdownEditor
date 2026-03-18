@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-18（mermaid ライトモード修正・PDF 出力追加）
+> 最終更新: 2026-03-18（プレビューテーマ切替機能追加）
 
 ---
 
@@ -137,7 +137,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 - `fixed inset-0 z-50` のオーバーレイ + 中央ダイアログ
 - オーバーレイクリック or ✕ボタンで閉じる
-- 設定項目: エディタフォントサイズ（スライダー 12〜20px）、フォントファミリー（セレクト）、タブ幅（2/4 ボタン）
+- 設定項目: エディタフォントサイズ（スライダー 12〜20px）、フォントファミリー（セレクト）、タブ幅（2/4 ボタン）、プレビューテーマ（GitHub / Minimal / Academic）
 
 ### TabBar
 
@@ -219,12 +219,14 @@ Editor の追加機能:
 | `markdown` | `string` | レンダリング対象の Markdown テキスト |
 | `filePath` | `string \| null` | 現在開いているファイルパス（相対パス画像の解決に使用） |
 | `isDark` | `boolean` | mermaid テーマの切替に使用 |
+| `previewTheme` | `PreviewTheme` | プレビュー用テーマ（`github` / `minimal` / `academic`） |
 
 - `img` カスタムレンダラーで相対パス画像を `readFile` + base64 変換してレンダリング
 - `code` カスタムレンダラーで `language-mermaid` は `MermaidDiagram` で描画、それ以外のコードブロックは `highlight.js` でシンタックスハイライト
 - バイナリファイルは `TEXT_EXTENSIONS` ホワイトリストで弾き、「表示できません」メッセージを表示（App.tsx で制御）
 - コンテナに `print-area` クラスを付与し、`@media print` で他の要素を非表示にしてプレビュー内容のみ PDF 出力できる
 - `MermaidDiagram` に `mermaid-diagram` クラスを付与し、SVG 背景を透明に上書きすることでライトモードの背景色問題を修正
+- `previewTheme` に対応する CSS を `src/styles/themes/` から `?raw` インポートし、`<style>` タグとして注入することでテーマを切替。CSS 変数（`--tw-prose-*` / `--tw-prose-invert-*`）でライト/ダーク両対応
 
 ---
 
@@ -358,7 +360,7 @@ export function useEditorActions(
 
 ```text
 src/
-├── types.ts              # 共通型: TabData, SaveState, Mode, AppSettings, DEFAULT_SETTINGS
+├── types.ts              # 共通型: TabData, SaveState, Mode, PreviewTheme, AppSettings, DEFAULT_SETTINGS
 ├── App.tsx               # 状態管理・キーボードショートカット・Tauri 呼び出し
 ├── components/
 │   ├── Header.tsx        # ☰ / Split / TOC / ⚙ トグルボタン
@@ -374,6 +376,10 @@ src/
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）
 │   └── useEditorActions.ts  # テキスト操作ロジック
 ├── styles/
-│   └── hljs-theme.css    # highlight.js GitHub テーマ（ライト/ダーク）
+│   ├── hljs-theme.css    # highlight.js GitHub テーマ（ライト/ダーク）
+│   └── themes/
+│       ├── github.css    # プレビューテーマ: GitHub スタイル
+│       ├── minimal.css   # プレビューテーマ: Minimal（無彩色）
+│       └── academic.css  # プレビューテーマ: Academic（暖色系）
 └── index.css             # @custom-variant dark / hljs-theme.css インポート
 ```

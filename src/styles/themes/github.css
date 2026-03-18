@@ -1,0 +1,41 @@
+/* GitHub Markdown テーマ */
+
+/* ライトモード */
+.prose {
+  --tw-prose-body: #24292f;
+  --tw-prose-headings: #24292f;
+  --tw-prose-lead: #57606a;
+  --tw-prose-links: #0969da;
+  --tw-prose-bold: #24292f;
+  --tw-prose-counters: #57606a;
+  --tw-prose-bullets: #d0d7de;
+  --tw-prose-hr: #d8dee4;
+  --tw-prose-quotes: #24292f;
+  --tw-prose-quote-borders: #d0d7de;
+  --tw-prose-captions: #57606a;
+  --tw-prose-code: #24292f;
+  --tw-prose-pre-code: #24292f;
+  --tw-prose-pre-bg: #f6f8fa;
+  --tw-prose-th-borders: #d8dee4;
+  --tw-prose-td-borders: #d0d7de;
+}
+
+/* ダークモード: .dark .prose は特異度が高く prose-invert より優先される */
+.dark .prose {
+  --tw-prose-body: #c9d1d9;
+  --tw-prose-headings: #f0f6fc;
+  --tw-prose-lead: #8b949e;
+  --tw-prose-links: #58a6ff;
+  --tw-prose-bold: #c9d1d9;
+  --tw-prose-counters: #8b949e;
+  --tw-prose-bullets: #30363d;
+  --tw-prose-hr: #30363d;
+  --tw-prose-quotes: #8b949e;
+  --tw-prose-quote-borders: #30363d;
+  --tw-prose-captions: #8b949e;
+  --tw-prose-code: #c9d1d9;
+  --tw-prose-pre-code: #c9d1d9;
+  --tw-prose-pre-bg: #161b22;
+  --tw-prose-th-borders: #30363d;
+  --tw-prose-td-borders: #30363d;
+}
