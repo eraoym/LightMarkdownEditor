@@ -13,6 +13,7 @@ interface TreeNode {
 interface ExplorerProps {
   onOpenFile: (path: string) => void;
   width: number;
+  initialFolder?: string;
 }
 
 async function loadChildren(dirPath: string): Promise<TreeNode[]> {
@@ -57,7 +58,7 @@ function updateNodeExpanded(
   });
 }
 
-export default function Explorer({ onOpenFile, width }: ExplorerProps) {
+export default function Explorer({ onOpenFile, width, initialFolder }: ExplorerProps) {
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [tree, setTree] = useState<TreeNode[]>([]);
 
@@ -67,6 +68,13 @@ export default function Explorer({ onOpenFile, width }: ExplorerProps) {
     setRootPath(saved);
     loadChildren(saved).then(setTree).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!initialFolder) return;
+    setRootPath(initialFolder);
+    localStorage.setItem("explorerPath", initialFolder);
+    loadChildren(initialFolder).then(setTree).catch(() => {});
+  }, [initialFolder]);
 
   const handleSelectFolder = async () => {
     const selected = await open({ directory: true });

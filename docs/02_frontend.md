@@ -97,6 +97,8 @@ const [isDark, setIsDark] = useState(...);
 const [settings, setSettings] = useState<AppSettings>(...); // localStorage "app_settings" から初期化
 const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+const [isDragOver, setIsDragOver] = useState(false);       // D&D オーバーレイ表示フラグ
+const [dropFolder, setDropFolder] = useState<string | undefined>(undefined); // D&D でドロップされたフォルダ
 const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem("sidebarWidth") ?? "192"));
 // スプリットプレビュー（編集モード時のみ有効）
 const [isSplitPreview, setIsSplitPreview] = useState(false);
@@ -106,6 +108,14 @@ const [isTocOpen, setIsTocOpen] = useState(false);
 const [tocWidth, setTocWidth] = useState(() => parseInt(localStorage.getItem("tocWidth") ?? "220"));
 const textareaRef = useRef<HTMLTextAreaElement>(null);
 ```
+
+### ドラッグ＆ドロップ
+
+- **ウィンドウへのドロップ**: `onDragDropEvent` でファイル/フォルダを判別
+  - ファイル → `handleOpenFileFromExplorer` でタブ開く
+  - フォルダ → `dropFolder` state を更新 → Explorer に `initialFolder` として渡す + Explorer を開く
+  - ドラッグ中は `isDragOver=true` → 全面オーバーレイ（青点線枠）を表示
+- **アイコンへのドロップ（起動時引数）**: `invoke("get_startup_args")` で Rust から引数取得、セッション復元後にファイルを開く
 
 ### Header
 
@@ -159,11 +169,13 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | --- | --- | --- |
 | `onOpenFile` | `(path: string) => void` | ファイルクリック時のハンドラ |
 | `width` | `number` | サイドバー幅（px）|
+| `initialFolder` | `string \| undefined` | 外部からフォルダを指定（D&D 等）|
 
 - フォルダ選択ボタン → `readDir` でツリー表示
 - フォルダクリック → 遅延展開/折り畳み
 - ファイルクリック → `onOpenFile` を呼び出し
 - `width` props で動的幅対応（App から渡す、`style={{ width }}` で適用）
+- `initialFolder` が変更されたとき `useEffect` で内部 rootPath を更新（D&D でフォルダをドロップした際に使用）
 
 ### TocSidebar
 

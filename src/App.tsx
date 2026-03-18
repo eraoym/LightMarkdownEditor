@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open, save, confirm } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile, writeFile, mkdir } from "@tauri-apps/plugin-fs";
+import { readTextFile, writeTextFile, writeFile, mkdir, stat } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import Header from "./components/Header";
 import Editor from "./components/Editor";
 import Preview from "./components/Preview";
@@ -40,6 +41,8 @@ export default function App() {
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExplorerOpen, setIsExplorerOpen] = useState(true);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [dropFolder, setDropFolder] = useState<string | undefined>(undefined);
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     parseInt(localStorage.getItem("sidebarWidth") ?? "192")
   );
@@ -300,6 +303,13 @@ export default function App() {
       ? await readTextFile(path)
       : `> このファイルは表示できません: \`${fileName}\``;
 
+    // await 後に再チェック（並走による二重オープン防止）
+    const existingIdAfter = tabsRef.current.findTabByPath(path);
+    if (existingIdAfter) {
+      tabsRef.current.switchTab(existingIdAfter);
+      return;
+    }
+
     const active = tabsRef.current.tabs.find(
       (t) => t.id === tabsRef.current.activeId
     )!;
@@ -309,6 +319,47 @@ export default function App() {
       tabsRef.current.newTab();
       tabsRef.current.openFileInTab(path, content);
     }
+  }, []);
+
+  // ウィンドウへのドラッグ＆ドロップ
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    getCurrentWindow().onDragDropEvent(async (event) => {
+      if (event.payload.type === "enter" || event.payload.type === "over") {
+        setIsDragOver(true);
+      } else if (event.payload.type === "leave") {
+        setIsDragOver(false);
+      } else if (event.payload.type === "drop") {
+        setIsDragOver(false);
+        for (const path of event.payload.paths) {
+          try {
+            const info = await stat(path);
+            if (info.isDirectory) {
+              setDropFolder(path);
+              setIsExplorerOpen(true);
+            } else {
+              await handleOpenFileFromExplorer(path);
+            }
+          } catch {
+            await handleOpenFileFromExplorer(path);
+          }
+        }
+      }
+    }).then((f) => { unlisten = f; });
+    return () => { unlisten?.(); };
+  }, [handleOpenFileFromExplorer]);
+
+  // 起動時引数からファイルを開く（アイコンへのドロップ）
+  useEffect(() => {
+    invoke<string[]>("get_startup_args").then((filePaths) => {
+      if (filePaths.length === 0) return;
+      setTimeout(async () => {
+        for (const path of filePaths) {
+          await handleOpenFileFromExplorer(path);
+        }
+      }, 300);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -343,7 +394,7 @@ export default function App() {
 
   return (
     <div
-      className={`flex flex-col h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 ${isDark ? "dark" : ""}`}
+      className={`relative flex flex-col h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 ${isDark ? "dark" : ""}`}
     >
       <Header
         filePath={tabs.activeFilePath}
@@ -382,7 +433,7 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {isExplorerOpen && (
           <>
-            <Explorer onOpenFile={handleOpenFileFromExplorer} width={sidebarWidth} />
+            <Explorer onOpenFile={handleOpenFileFromExplorer} width={sidebarWidth} initialFolder={dropFolder} />
             <div
               className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-400 active:bg-blue-500"
               onMouseDown={(e) => {
@@ -490,6 +541,11 @@ export default function App() {
           onChange={setSettings}
           onClose={() => setIsSettingsOpen(false)}
         />
+      )}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-500/10 border-2 border-blue-500 border-dashed pointer-events-none">
+          <span className="text-blue-600 dark:text-blue-400 text-lg font-semibold drop-shadow">ここにドロップして開く</span>
+        </div>
       )}
     </div>
   );

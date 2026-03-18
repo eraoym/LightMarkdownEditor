@@ -36,6 +36,10 @@
     "dialog:allow-confirm",
     "core:window:allow-set-title",
     "core:window:allow-set-size",
-    "core:window:allow-inner-size"
+    "core:window:allow-inner-size",
+    {
+      "identifier": "fs:allow-stat",
+      "allow": [{ "path": "**" }]
+    }
   ]
 }
