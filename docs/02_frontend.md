@@ -225,6 +225,8 @@ Editor の追加機能:
 - `code` カスタムレンダラーで `language-mermaid` は `MermaidDiagram` で描画、それ以外のコードブロックは `highlight.js` でシンタックスハイライト
 - バイナリファイルは `TEXT_EXTENSIONS` ホワイトリストで弾き、「表示できません」メッセージを表示（App.tsx で制御）
 - コンテナに `print-area` クラスを付与し、`@media print` で他の要素を非表示にしてプレビュー内容のみ PDF 出力できる
+- `@page` の `margin: 0 0 1.2cm` + `@bottom-center { content: counter(page) }` でページ番号を中央下部に表示（WebView2の"localhost:1420"フッタを置換）
+- `.print-area hr` に `break-after: page` を指定することで、Markdown の `---` を改ページとして扱える
 - `MermaidDiagram` に `mermaid-diagram` クラスを付与し、SVG 背景を透明に上書きすることでライトモードの背景色問題を修正
 - `previewTheme` に対応する CSS を `src/styles/themes/` から `?raw` インポートし、`<style>` タグとして注入することでテーマを切替。CSS 変数（`--tw-prose-*` / `--tw-prose-invert-*`）でライト/ダーク両対応
 

@@ -26,6 +26,17 @@
 }
 
 /* PDF印刷: プレビュー内容のみ出力 */
+@page {
+  /* 上下: 余白確保 + ページ番号領域、左右: 0（URL/タイトル非表示） */
+  margin: 1.2cm 0;
+  @bottom-center {
+    content: counter(page);
+    font-size: 9pt;
+    color: #555;
+    font-family: sans-serif;
+  }
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -41,6 +52,16 @@
     width: 100%;
     height: auto;
     overflow: visible;
-    padding: 2rem;
+    /* 上下は @page margin に任せ、左右のみ padding で確保 */
+    padding: 0 2.5cm;
+  }
+
+  /* --- を改ページとして扱う */
+  .print-area hr {
+    page-break-after: always;
+    break-after: page;
+    border: none !important;
+    margin: 0 !important;
+    height: 0 !important;
   }
 }
