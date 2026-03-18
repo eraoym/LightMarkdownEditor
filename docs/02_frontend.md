@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-17（シンタックスハイライト・設定画面 追加）
+> 最終更新: 2026-03-18（mermaid ライトモード修正・PDF 出力追加）
 
 ---
 
@@ -125,6 +125,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `isTocOpen` | `boolean` | TOCサイドバー表示状態 |
 | `onTocToggle` | `() => void` | TOCサイドバートグルハンドラ |
 | `onSettingsOpen` | `() => void` | 設定モーダルを開くハンドラ |
+| `onPrint` | `() => void` | PDF 印刷ハンドラ（PreviewMode 時に PDF ボタン表示） |
 
 ### SettingsModal
 
@@ -222,6 +223,8 @@ Editor の追加機能:
 - `img` カスタムレンダラーで相対パス画像を `readFile` + base64 変換してレンダリング
 - `code` カスタムレンダラーで `language-mermaid` は `MermaidDiagram` で描画、それ以外のコードブロックは `highlight.js` でシンタックスハイライト
 - バイナリファイルは `TEXT_EXTENSIONS` ホワイトリストで弾き、「表示できません」メッセージを表示（App.tsx で制御）
+- コンテナに `print-area` クラスを付与し、`@media print` で他の要素を非表示にしてプレビュー内容のみ PDF 出力できる
+- `MermaidDiagram` に `mermaid-diagram` クラスを付与し、SVG 背景を透明に上書きすることでライトモードの背景色問題を修正
 
 ---
 

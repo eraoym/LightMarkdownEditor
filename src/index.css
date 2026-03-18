@@ -2,3 +2,45 @@
 @import "./styles/hljs-theme.css";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* コードブロック: ライト/ダークで背景・テキスト色を切り替え（prose-zinc のデフォルトを上書き） */
+.prose pre {
+  background-color: #f6f8fa !important; /* GitHub Light */
+  color: #24292e !important;
+}
+.dark .prose pre {
+  background-color: #161b22 !important; /* GitHub Dark */
+  color: #c9d1d9 !important;
+}
+
+/* Mermaid: pre コンテナは透過にして SVG コンテンツだけ表示 */
+.prose pre:has(.mermaid-diagram) {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Mermaid: SVG 自体の背景も透過（JS でも設定済み、CSS はフォールバック） */
+.mermaid-diagram svg {
+  background: transparent !important;
+}
+
+/* PDF印刷: プレビュー内容のみ出力 */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    padding: 2rem;
+  }
+}

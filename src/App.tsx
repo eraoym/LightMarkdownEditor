@@ -333,6 +333,7 @@ export default function App() {
         isTocOpen={isTocOpen}
         onTocToggle={() => setIsTocOpen((v) => !v)}
         onSettingsOpen={() => setIsSettingsOpen(true)}
+        onPrint={() => window.print()}
       />
       <TabBar
         tabs={tabs.tabs}

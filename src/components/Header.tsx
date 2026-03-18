@@ -15,6 +15,7 @@ interface HeaderProps {
   isTocOpen: boolean;
   onTocToggle: () => void;
   onSettingsOpen: () => void;
+  onPrint: () => void;
 }
 
 export default function Header({
@@ -32,6 +33,7 @@ export default function Header({
   isTocOpen,
   onTocToggle,
   onSettingsOpen,
+  onPrint,
 }: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
@@ -91,6 +93,15 @@ export default function Header({
           className={`text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${isTocOpen ? "bg-zinc-200 dark:bg-zinc-700" : ""}`}
         >
           TOC
+        </button>
+      )}
+      {mode === "preview" && (
+        <button
+          onClick={onPrint}
+          title="PDFとして印刷"
+          className="text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        >
+          PDF
         </button>
       )}
       <button

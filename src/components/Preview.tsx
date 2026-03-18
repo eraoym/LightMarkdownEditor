@@ -19,13 +19,19 @@ function MermaidDiagram({ code, isDark }: { code: string; isDark: boolean }) {
     mermaid.initialize({ startOnLoad: false, theme: isDark ? "dark" : "default" });
     const id = `mermaid-${Math.random().toString(36).slice(2)}`;
     mermaid.render(id, code).then(({ svg }) => {
-      if (ref.current) ref.current.innerHTML = svg;
+      if (ref.current) {
+        ref.current.innerHTML = svg;
+        // mermaid が SVG に付与するインライン background スタイルを除去し
+        // ページの背景色に合わせる（ライト/ダーク共通）
+        const svgEl = ref.current.querySelector("svg");
+        if (svgEl) svgEl.style.background = "transparent";
+      }
     }).catch(() => {
       if (ref.current) ref.current.textContent = "mermaid 描画エラー";
     });
   }, [code, isDark]);
 
-  return <div ref={ref} />;
+  return <div ref={ref} className="mermaid-diagram" />;
 }
 
 function ImageRenderer({
@@ -87,7 +93,7 @@ function headingId(children: React.ReactNode): string {
 
 export default function Preview({ markdown, filePath, isDark }: PreviewProps) {
   return (
-    <div className="w-full h-full overflow-y-auto p-4 prose prose-zinc dark:prose-invert max-w-none">
+    <div className="print-area w-full h-full overflow-y-auto p-4 prose prose-zinc dark:prose-invert max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
