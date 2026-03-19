@@ -8,6 +8,20 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ## リリースノート
 
+### v0.4.0 — 2026-03-20
+
+#### Added
+
+- **テーブル挿入** — ツールバー `⊞` ボタンで Markdown テーブルテンプレートを挿入。テキスト選択時はカンマ区切りテキストをテーブルに変換
+- **Excel 貼り付け（Ctrl+Shift+V）** — クリップボードのタブ区切りテキストを Markdown テーブルとして挿入
+- **操作マニュアル** — `docs/manual.md` に全機能のキーボードショートカット・操作手順を整備
+
+#### Fixed
+
+- Tab キー押下時に意図しない行が挿入されるバグを修正
+
+---
+
 ### v0.3.1 — 2026-03-18
 
 #### Added
@@ -86,7 +100,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 | エクスプローラー | フォルダツリーからファイルを開く |
 | Markdown プレビュー | Edit / Preview / Split（横並び）モードを切替 |
 | TOC サイドバー | 見出し一覧を表示、クリックでジャンプ |
-| ツールバー | Bold / Italic / H1-H3 / リスト / コード等の書式挿入 |
+| ツールバー | Bold / Italic / H1-H3 / リスト / コード / テーブル挿入ボタン |
 | Undo/Redo | タブごとに独立した履歴（最大200エントリ） |
 | 画像ペースト | クリップボードから画像をファイルに保存してリンク挿入 |
 | シンタックスハイライト | コードブロックのハイライト表示 |
@@ -212,3 +226,4 @@ v4 では `tailwind.config.js` / `postcss.config.js` は不要。`vite.config.ts
 | [docs/01_concept.md](docs/01_concept.md) | MVPコンセプト・要件定義 |
 | [docs/02_frontend.md](docs/02_frontend.md) | フロントエンド設計 |
 | [docs/status.md](docs/status.md) | 実装状況 |
+| [docs/manual.md](docs/manual.md) | 操作マニュアル |
