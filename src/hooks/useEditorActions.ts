@@ -1,4 +1,5 @@
 import { RefObject, useEffect, useRef } from "react";
+import { parseToMarkdownTable } from "../utils/parseTable";
 
 export interface EditorActions {
   bold: () => void;
@@ -7,6 +8,7 @@ export interface EditorActions {
   heading: (level: 1 | 2 | 3) => void;
   bulletList: () => void;
   orderedList: () => void;
+  table: () => void;
 }
 
 export function useEditorActions(
@@ -107,6 +109,34 @@ export function useEditorActions(
     }
   }
 
+  function insertTable() {
+    const el = textareaRef.current;
+    if (!el) return;
+    const { start, end } = getSel();
+    const current = el.value;
+    const selected = current.slice(start, end);
+
+    let tableText: string;
+    if (selected.trim().length === 0) {
+      // ケース1: 未選択 → テンプレート挿入
+      tableText = "| 列1 | 列2 |\n| --- | --- |\n| セル | セル |";
+    } else {
+      // ケース2: 選択範囲をカンマ区切りで変換
+      tableText = parseToMarkdownTable(selected, ",");
+    }
+
+    const newText = current.slice(0, start) + tableText + current.slice(end);
+    setMarkdown(newText);
+    requestAnimationFrame(() => {
+      el.focus();
+      if (selected.trim().length === 0) {
+        el.setSelectionRange(start + 2, start + 4); // "列1" を選択
+      } else {
+        el.setSelectionRange(start, start + tableText.length);
+      }
+    });
+  }
+
   return {
     bold: () => wrapSelection("**", "**"),
     italic: () => wrapSelection("*", "*"),
@@ -114,5 +144,6 @@ export function useEditorActions(
     heading: (level) => toggleLinePrefix("#".repeat(level) + " "),
     bulletList: () => toggleLinePrefix("- "),
     orderedList: () => toggleLinePrefix("1. "),
+    table: insertTable,
   };
 }

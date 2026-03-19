@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { parseToMarkdownTable } from "../utils/parseTable";
 
 interface EditorProps {
   value: string;
@@ -25,15 +26,15 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
       const indent = " ".repeat(tabWidth);
       if (e.shiftKey) {
         // Shift+Tab: 行頭のスペースを tabWidth 分削除
-        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-        if (value.slice(lineStart).startsWith(indent)) {
-          const newValue = value.slice(0, lineStart) + value.slice(lineStart + tabWidth);
+        const lineStart = el.value.lastIndexOf("\n", start - 1) + 1;
+        if (el.value.slice(lineStart).startsWith(indent)) {
+          const newValue = el.value.slice(0, lineStart) + el.value.slice(lineStart + tabWidth);
           onProgrammaticChange(newValue);
           requestAnimationFrame(() => {
             el.setSelectionRange(Math.max(lineStart, start - tabWidth), Math.max(lineStart, end - tabWidth));
           });
-        } else if (value.slice(lineStart).startsWith(" ")) {
-          const newValue = value.slice(0, lineStart) + value.slice(lineStart + 1);
+        } else if (el.value.slice(lineStart).startsWith(" ")) {
+          const newValue = el.value.slice(0, lineStart) + el.value.slice(lineStart + 1);
           onProgrammaticChange(newValue);
           requestAnimationFrame(() => {
             el.setSelectionRange(Math.max(lineStart, start - 1), Math.max(lineStart, end - 1));
@@ -41,12 +42,29 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
         }
       } else {
         // Tab: スペースを tabWidth 分挿入
-        const newValue = value.slice(0, start) + indent + value.slice(end);
+        const newValue = el.value.slice(0, start) + indent + el.value.slice(end);
         onProgrammaticChange(newValue);
         requestAnimationFrame(() => {
           el.setSelectionRange(start + tabWidth, start + tabWidth);
         });
       }
+      return;
+    }
+
+    if (e.key.toLowerCase() === "v" && e.ctrlKey && e.shiftKey) {
+      e.preventDefault();
+      navigator.clipboard.readText().then((text) => {
+        if (!text.trim()) return;
+        const isTabDelimited = text.includes("\t");
+        if (!isTabDelimited) return;
+        const tableText = parseToMarkdownTable(text, "\t");
+        const current = el.value;
+        const newValue = current.slice(0, start) + tableText + current.slice(end);
+        onProgrammaticChange(newValue);
+        requestAnimationFrame(() => {
+          el.setSelectionRange(start, start + tableText.length);
+        });
+      });
       return;
     }
 

@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-18（プレビューテーマ切替機能追加）
+> 最終更新: 2026-03-20（テーブル挿入機能追加・Tab バグ修正）
 
 ---
 
@@ -207,6 +207,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | 箇条書き | `—` | 行頭に `- ` を付与/削除 |
 | 番号リスト | `1.` | 行頭に `1. ` を付与/削除 |
 | コード | `` ` `` | 選択テキストを `` `...` `` で囲む (選択なしでコードブロック) |
+| テーブル | `⊞` | 未選択: 2×2テンプレート挿入 / 選択時: カンマ区切りテキストを表に変換 |
 
 ### Editor
 
@@ -220,8 +221,9 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `tabWidth` | `2 \| 4` | タブ幅（スペース数、デフォルト 2）|
 
 Editor の追加機能:
-- `Tab` → `tabWidth` 分のスペースを挿入
-- `Shift+Tab` → 行頭のスペースを `tabWidth` 分削除
+- `Tab` → `tabWidth` 分のスペースを挿入（DOM の `el.value` を直接参照し React state との非同期ズレを回避）
+- `Shift+Tab` → 行頭のスペースを `tabWidth` 分削除（同上）
+- `Ctrl+Shift+V` → クリップボードのタブ区切りテキスト（Excel コピー形式）を Markdown テーブルとして貼り付け
 - `(` / `[` / `` ` `` → 対応する閉じ記号を自動補完
 
 ### Preview
@@ -281,7 +283,7 @@ export function useEditorActions(
 - `toggleLinePrefix(prefix)` — 行頭プレフィックスのトグル
 - `insertAtCursor(text)` — カーソル位置にテキスト挿入
 
-返す actions: `bold`, `italic`, `code`, `heading(1|2|3)`, `bulletList`, `orderedList`
+返す actions: `bold`, `italic`, `code`, `heading(1|2|3)`, `bulletList`, `orderedList`, `table`
 
 ---
 
@@ -300,6 +302,7 @@ export function useEditorActions(
 | `Ctrl+Shift+Tab` | 前のタブへ切替 |
 | `Tab` | スペース2個挿入（Editor内） |
 | `Shift+Tab` | 行頭スペース2個削除（Editor内） |
+| `Ctrl+Shift+V` | クリップボードのタブ区切りテキストを Markdown テーブルとして貼り付け |
 
 ---
 
@@ -389,6 +392,8 @@ src/
 │   ├── useTabs.ts           # 多タブ履歴管理フック
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）
 │   └── useEditorActions.ts  # テキスト操作ロジック
+├── utils/
+│   └── parseTable.ts        # CSV/TSV → Markdown テーブル変換ユーティリティ
 ├── styles/
 │   ├── hljs-theme.css    # highlight.js GitHub テーマ（ライト/ダーク）
 │   └── themes/

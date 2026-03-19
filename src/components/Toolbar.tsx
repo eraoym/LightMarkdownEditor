@@ -22,6 +22,7 @@ export default function Toolbar({ actions }: ToolbarProps) {
     { label: "—", title: "箇条書き", onClick: actions.bulletList },
     { label: "1.", title: "番号リスト", onClick: actions.orderedList },
     { label: "`", title: "コード", onClick: actions.code },
+    { label: "⊞", title: "テーブル挿入", onClick: actions.table },
   ];
 
   return (
