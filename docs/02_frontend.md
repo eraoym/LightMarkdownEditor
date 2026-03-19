@@ -168,8 +168,8 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | Props | 型 | 説明 |
 | --- | --- | --- |
 | `onOpenFile` | `(path: string) => void` | ファイルクリック時のハンドラ |
-| `width` | `number` | サイドバー幅（px）|
-| `initialFolder` | `string \| undefined` | 外部からフォルダを指定（D&D 等）|
+| `width` | `number` | サイドバー幅（px） |
+| `initialFolder` | `string \| undefined` | 外部からフォルダを指定（D&D 等） |
 
 - フォルダ選択ボタン → `readDir` でツリー表示
 - フォルダクリック → 遅延展開/折り畳み
@@ -182,7 +182,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | Props | 型 | 説明 |
 | --- | --- | --- |
 | `markdown` | `string` | 目次抽出対象の Markdown テキスト |
-| `width` | `number` | サイドバー幅（px）|
+| `width` | `number` | サイドバー幅（px） |
 
 - `useMemo` で `markdown` が変わった時のみ見出しを再抽出
 - `/^(#{1,6})\s+(.+)$/gm` で H1〜H6 を抽出
@@ -198,14 +198,14 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 ボタン一覧:
 
 | ボタン | 記号 | 動作 |
-|--------|------|------|
+| ----- | ---- | ---- |
 | Bold | **B** | 選択テキストを `**...**` で囲む |
 | Italic | *I* | 選択テキストを `*...*` で囲む |
-| H1 | H1 | 行頭に `# ` を付与/削除 |
-| H2 | H2 | 行頭に `## ` を付与/削除 |
-| H3 | H3 | 行頭に `### ` を付与/削除 |
-| 箇条書き | `—` | 行頭に `- ` を付与/削除 |
-| 番号リスト | `1.` | 行頭に `1. ` を付与/削除 |
+| H1 | H1 | 行頭に `#` を付与/削除 |
+| H2 | H2 | 行頭に `##` を付与/削除 |
+| H3 | H3 | 行頭に `###` を付与/削除 |
+| 箇条書き | `—` | 行頭に `-` を付与/削除 |
+| 番号リスト | `1.` | 行頭に `1.` を付与/削除 |
 | コード | `` ` `` | 選択テキストを `` `...` `` で囲む (選択なしでコードブロック) |
 | テーブル | `⊞` | 未選択: 2×2テンプレート挿入 / 選択時: カンマ区切りテキストを表に変換 |
 
@@ -216,11 +216,12 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `value` | `string` | 現在の Markdown テキスト |
 | `onChange` | `(v: string) => void` | テキスト変更ハンドラ |
 | `ref` | `RefObject<HTMLTextAreaElement>` | `forwardRef` で外部公開（useEditorActions が使用） |
-| `fontSize` | `number \| undefined` | エディタフォントサイズ（px）|
+| `fontSize` | `number \| undefined` | エディタフォントサイズ（px） |
 | `fontFamily` | `string \| undefined` | エディタフォントファミリー |
-| `tabWidth` | `2 \| 4` | タブ幅（スペース数、デフォルト 2）|
+| `tabWidth` | `2 \| 4` | タブ幅（スペース数、デフォルト 2） |
 
 Editor の追加機能:
+
 - `Tab` → `tabWidth` 分のスペースを挿入（DOM の `el.value` を直接参照し React state との非同期ズレを回避）
 - `Shift+Tab` → 行頭のスペースを `tabWidth` 分削除（同上）
 - `Ctrl+Shift+V` → クリップボードのタブ区切りテキスト（Excel コピー形式）を Markdown テーブルとして貼り付け
@@ -258,6 +259,7 @@ export function useTabs(): UseTabsReturn
 ```
 
 主要な返り値:
+
 - `tabs`, `activeId`, `activeContent`, `activeFilePath`, `activeSaveState` — 描画用
 - `newTab()`, `closeTab(id)`, `switchTab(id)`, `nextTab()`, `prevTab()` — タブ操作
 - `findTabByPath(path)` — 同一ファイルの重複チェック
@@ -279,6 +281,7 @@ export function useEditorActions(
 ```
 
 内部関数:
+
 - `wrapSelection(before, after)` — 選択範囲を記号で囲む
 - `toggleLinePrefix(prefix)` — 行頭プレフィックスのトグル
 - `insertAtCursor(text)` — カーソル位置にテキスト挿入
