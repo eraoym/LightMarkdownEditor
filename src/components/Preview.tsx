@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Children, cloneElement, isValidElement } from "react";
+import type { ReactElement, InputHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { readFile } from "@tauri-apps/plugin-fs";
@@ -23,6 +24,7 @@ interface PreviewProps {
   isDark: boolean;
   previewTheme: PreviewTheme;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
+  onCheckboxToggle?: (index: number) => void;
 }
 
 function MermaidDiagram({ code, isDark }: { code: string; isDark: boolean }) {
@@ -108,7 +110,7 @@ function headingId(children: React.ReactNode): string {
   return toSlug(extractText(children));
 }
 
-export default function Preview({ markdown, filePath, isDark, previewTheme, scrollRef }: PreviewProps) {
+export default function Preview({ markdown, filePath, isDark, previewTheme, scrollRef, onCheckboxToggle }: PreviewProps) {
   return (
     <div ref={scrollRef} className="print-area w-full h-full overflow-y-auto p-4 prose prose-zinc dark:prose-invert max-w-none">
       <style>{THEME_CSS[previewTheme]}</style>
@@ -156,6 +158,26 @@ export default function Preview({ markdown, filePath, isDark, previewTheme, scro
           },
           img({ src, alt }) {
             return <ImageRenderer src={src} alt={alt} filePath={filePath} />;
+          },
+          li({ node, children, className }) {
+            const isTaskItem = className?.toString().includes("task-list-item");
+            if (!isTaskItem || !onCheckboxToggle) {
+              return <li className={className}>{children}</li>;
+            }
+            const line = (node as any)?.position?.start?.line as number | undefined;
+            return (
+              <li className={className}>
+                {Children.map(children, (child) => {
+                  if (isValidElement(child) && (child as ReactElement<InputHTMLAttributes<HTMLInputElement>>).type === "input") {
+                    return cloneElement(child as ReactElement<InputHTMLAttributes<HTMLInputElement>>, {
+                      disabled: false,
+                      onChange: () => line !== undefined && onCheckboxToggle(line),
+                    });
+                  }
+                  return child;
+                })}
+              </li>
+            );
           },
           h1({ children }) { return <h1 id={headingId(children)}>{children}</h1>; },
           h2({ children }) { return <h2 id={headingId(children)}>{children}</h2>; },

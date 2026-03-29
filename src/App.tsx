@@ -261,6 +261,21 @@ export default function App() {
     tabsRef.current.closeTab(id);
   }, []);
 
+  const handleCheckboxToggle = useCallback((line: number) => {
+    const content = tabsRef.current.activeContent;
+    const lines = content.split("\n");
+    const idx = line - 1; // 1-indexed → 0-indexed
+    if (idx < 0 || idx >= lines.length) return;
+    if (lines[idx].includes("- [ ]")) {
+      lines[idx] = lines[idx].replace("- [ ]", "- [x]");
+    } else if (lines[idx].match(/- \[[xX]\]/)) {
+      lines[idx] = lines[idx].replace(/- \[[xX]\]/, "- [ ]");
+    } else {
+      return;
+    }
+    tabsRef.current.setActiveContentImmediate(lines.join("\n"));
+  }, []);
+
   const handleImagePaste = useCallback(async (blob: Blob, start: number, end: number) => {
     const filePath = tabsRef.current.activeFilePath;
     if (!filePath) return;
@@ -386,6 +401,18 @@ export default function App() {
       } else if (e.key === "Tab" && e.shiftKey) {
         e.preventDefault();
         tabsRef.current.prevTab();
+      } else if (e.key === ";") {
+        e.preventDefault();
+        const d = new Date();
+        editorActionsRef.current.insertAtCursor(
+          `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+        );
+      } else if (e.key === ":") {
+        e.preventDefault();
+        const d = new Date();
+        editorActionsRef.current.insertAtCursor(
+          `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+        );
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -497,6 +524,7 @@ export default function App() {
                     isDark={isDark}
                     previewTheme={settings.previewTheme}
                     scrollRef={previewScrollRef}
+                    onCheckboxToggle={handleCheckboxToggle}
                   />
                 </div>
               </>
@@ -507,6 +535,7 @@ export default function App() {
                 filePath={tabs.activeFilePath}
                 isDark={isDark}
                 previewTheme={settings.previewTheme}
+                onCheckboxToggle={handleCheckboxToggle}
               />
             )}
             {mode === "preview" && isTocOpen && (

@@ -68,6 +68,22 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
       return;
     }
 
+    if (e.key.toLowerCase() === "v" && e.ctrlKey && e.altKey) {
+      e.preventDefault();
+      navigator.clipboard.read().then((clipboardItems) => {
+        for (const clipboardItem of clipboardItems) {
+          const imageType = clipboardItem.types.find((t) => t.startsWith("image/"));
+          if (imageType) {
+            clipboardItem.getType(imageType).then((blob) => {
+              onImagePaste?.(blob, start, end);
+            });
+            break;
+          }
+        }
+      }).catch(() => {});
+      return;
+    }
+
     // 括弧・記号の自動補完
     const pairs: Record<string, string> = {
       "(": ")",
@@ -85,18 +101,8 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
     }
   }
 
-  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
-    if (!onImagePaste) return;
-    const imageItem = Array.from(e.clipboardData.items).find((item) =>
-      item.type.startsWith("image/")
-    );
-    if (!imageItem) return;
-    const blob = imageItem.getAsFile();
-    if (!blob) return;
-    e.preventDefault();
-    const start = e.currentTarget.selectionStart;
-    const end = e.currentTarget.selectionEnd;
-    onImagePaste(blob, start, end);
+  function handlePaste(_e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    // 画像の自動貼り付けは廃止。明示的な画像貼り付けは Ctrl+Alt+V で行う
   }
 
   const fontStyle: React.CSSProperties = {

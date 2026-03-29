@@ -9,6 +9,7 @@ export interface EditorActions {
   bulletList: () => void;
   orderedList: () => void;
   table: () => void;
+  insertAtCursor: (text: string) => void;
 }
 
 export function useEditorActions(
@@ -137,6 +138,20 @@ export function useEditorActions(
     });
   }
 
+  function insertAtCursor(text: string) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const { start, end } = getSel();
+    const current = el.value;
+    const newText = current.slice(0, start) + text + current.slice(end);
+    setMarkdown(newText);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + text.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   return {
     bold: () => wrapSelection("**", "**"),
     italic: () => wrapSelection("*", "*"),
@@ -145,5 +160,6 @@ export function useEditorActions(
     bulletList: () => toggleLinePrefix("- "),
     orderedList: () => toggleLinePrefix("1. "),
     table: insertTable,
+    insertAtCursor,
   };
 }

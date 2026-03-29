@@ -19,11 +19,16 @@ function stripInlineMarkdown(text: string): string {
     .trim();
 }
 
+function stripFencedCodeBlocks(markdown: string): string {
+  return markdown.replace(/^`{3,}[^\n]*\n[\s\S]*?^`{3,}[ \t]*$/gm, "");
+}
+
 function extractHeadings(markdown: string): Heading[] {
+  const stripped = stripFencedCodeBlocks(markdown);
   const results: Heading[] = [];
   const regex = /^(#{1,6})\s+(.+)$/gm;
   let match: RegExpExecArray | null;
-  while ((match = regex.exec(markdown)) !== null) {
+  while ((match = regex.exec(stripped)) !== null) {
     const text = stripInlineMarkdown(match[2]);
     results.push({ level: match[1].length, text, id: toSlug(text) });
   }

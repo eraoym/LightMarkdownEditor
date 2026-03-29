@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-20（テーブル挿入機能追加・Tab バグ修正）
+> 最終更新: 2026-03-29（Issue #9/#10/#11/#12 対応）
 
 ---
 
@@ -185,6 +185,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `width` | `number` | サイドバー幅（px） |
 
 - `useMemo` で `markdown` が変わった時のみ見出しを再抽出
+- 抽出前に `stripFencedCodeBlocks()` でフェンスドコードブロックを除去してからマッチ（Issue #9 対応）
 - `/^(#{1,6})\s+(.+)$/gm` で H1〜H6 を抽出
 - 見出しレベルに応じて `paddingLeft: (level-1) * 12px` でインデント表示
 - PreviewMode + `isTocOpen` の時のみ表示
@@ -225,6 +226,7 @@ Editor の追加機能:
 - `Tab` → `tabWidth` 分のスペースを挿入（DOM の `el.value` を直接参照し React state との非同期ズレを回避）
 - `Shift+Tab` → 行頭のスペースを `tabWidth` 分削除（同上）
 - `Ctrl+Shift+V` → クリップボードのタブ区切りテキスト（Excel コピー形式）を Markdown テーブルとして貼り付け
+- `Ctrl+Alt+V` → クリップボード内の画像をファイルとして貼り付け（テキストのみの場合は無効）。Ctrl+V での画像自動貼り付けは廃止（Issue #12 対応）
 - `(` / `[` / `` ` `` → 対応する閉じ記号を自動補完
 
 ### Preview
@@ -235,8 +237,10 @@ Editor の追加機能:
 | `filePath` | `string \| null` | 現在開いているファイルパス（相対パス画像の解決に使用） |
 | `isDark` | `boolean` | mermaid テーマの切替に使用 |
 | `previewTheme` | `PreviewTheme` | プレビュー用テーマ（`github` / `minimal` / `academic`） |
+| `onCheckboxToggle` | `(index: number) => void \| undefined` | チェックボックスの n 番目がクリックされたときのコールバック |
 
 - `img` カスタムレンダラーで相対パス画像を `readFile` + base64 変換してレンダリング
+- GFM チェックボックスはカスタム `input` レンダラーで enabled として描画し、クリック時に `onCheckboxToggle(index)` を呼び出す（Issue #10 対応）
 - `code` カスタムレンダラーで `language-mermaid` は `MermaidDiagram` で描画、それ以外のコードブロックは `highlight.js` でシンタックスハイライト
 - バイナリファイルは `TEXT_EXTENSIONS` ホワイトリストで弾き、「表示できません」メッセージを表示（App.tsx で制御）
 - コンテナに `print-area` クラスを付与し、`@media print` で他の要素を非表示にしてプレビュー内容のみ PDF 出力できる
@@ -286,7 +290,7 @@ export function useEditorActions(
 - `toggleLinePrefix(prefix)` — 行頭プレフィックスのトグル
 - `insertAtCursor(text)` — カーソル位置にテキスト挿入
 
-返す actions: `bold`, `italic`, `code`, `heading(1|2|3)`, `bulletList`, `orderedList`, `table`
+返す actions: `bold`, `italic`, `code`, `heading(1|2|3)`, `bulletList`, `orderedList`, `table`, `insertAtCursor`
 
 ---
 
@@ -306,6 +310,9 @@ export function useEditorActions(
 | `Tab` | スペース2個挿入（Editor内） |
 | `Shift+Tab` | 行頭スペース2個削除（Editor内） |
 | `Ctrl+Shift+V` | クリップボードのタブ区切りテキストを Markdown テーブルとして貼り付け |
+| `Ctrl+Alt+V` | クリップボード内の画像をファイルとして貼り付け |
+| `Ctrl+;` | 現在の日付を `YYYY/M/D` 形式でカーソル位置に挿入 |
+| `Ctrl+:` | 現在の時刻を `hh:mm` 形式でカーソル位置に挿入 |
 
 ---
 
