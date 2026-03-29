@@ -3,6 +3,7 @@ import { open, save, confirm } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile, writeFile, mkdir, stat } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import Header from "./components/Header";
 import Editor from "./components/Editor";
 import Preview from "./components/Preview";
@@ -54,6 +55,10 @@ export default function App() {
   const [tocWidth, setTocWidth] = useState(() =>
     parseInt(localStorage.getItem("tocWidth") ?? "220")
   );
+  const [appVersion, setAppVersion] = useState("");
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const isSyncingScroll = useRef(false);
@@ -447,6 +452,7 @@ export default function App() {
         onTocToggle={() => setIsTocOpen((v) => !v)}
         onSettingsOpen={() => setIsSettingsOpen(true)}
         onPrint={() => window.print()}
+        version={appVersion}
       />
       <TabBar
         tabs={tabs.tabs}

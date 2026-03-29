@@ -16,6 +16,7 @@ interface HeaderProps {
   onTocToggle: () => void;
   onSettingsOpen: () => void;
   onPrint: () => void;
+  version: string;
 }
 
 export default function Header({
@@ -34,6 +35,7 @@ export default function Header({
   onTocToggle,
   onSettingsOpen,
   onPrint,
+  version,
 }: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
@@ -103,6 +105,9 @@ export default function Header({
         >
           PDF
         </button>
+      )}
+      {version && (
+        <span className="text-xs text-zinc-400">v{version}</span>
       )}
       <button
         onClick={onSettingsOpen}

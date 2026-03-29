@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-03-29（Issue #9/#10/#11/#12 対応）
+> 最終更新: 2026-03-29（バージョン表示追加）
 
 ---
 
@@ -136,6 +136,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `onTocToggle` | `() => void` | TOCサイドバートグルハンドラ |
 | `onSettingsOpen` | `() => void` | 設定モーダルを開くハンドラ |
 | `onPrint` | `() => void` | PDF 印刷ハンドラ（PreviewMode 時に PDF ボタン表示） |
+| `version` | `string` | アプリバージョン文字列（`getVersion()` で取得、⚙ボタン左に `vX.Y.Z` 表示） |
 
 ### SettingsModal
 
