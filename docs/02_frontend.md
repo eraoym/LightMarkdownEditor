@@ -163,8 +163,11 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `onClose` | `(id: string) => void` | タブ閉じる（confirm 済み前提） |
 | `onCloseOthers` | `(id: string) => void` | 他のタブをすべて閉じる（confirm 済み前提） |
 | `onCloseAll` | `() => void` | すべてのタブを閉じる（confirm 済み前提） |
+| `onReorder` | `(fromIndex: number, toIndex: number) => void` | タブの並び替え（DnD） |
 
 右クリックコンテキストメニューで「タブを閉じる」「他のタブをすべて閉じる」「すべてのタブを閉じる」を表示。メニュー外クリックで自動的に閉じる。
+
+タブはドラッグ&ドロップで並び替え可能（HTML5 DnD API）。ドロップ先タブに青い左ボーダーを表示してドロップ位置を示す。並び替え後の順序はセッション保存に自動反映される。
 
 ### Explorer
 

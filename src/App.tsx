@@ -84,7 +84,20 @@ export default function App() {
   }, [settings]);
 
   // セッション復元（前回開いていたタブ）
+  const sessionRestoredRef = useRef(false);
+
+  const saveSession = useCallback(() => {
+    const toSave = tabsRef.current.tabs
+      .filter((t) => t.filePath !== null)
+      .map((t) => ({ filePath: t.filePath! }));
+    localStorage.setItem("session_tabs", JSON.stringify(toSave));
+    localStorage.setItem("session_activeFilePath", tabsRef.current.activeFilePath ?? "");
+  }, []);
+
   useEffect(() => {
+    if (sessionRestoredRef.current) return; // StrictMode 二重実行を防ぐ
+    sessionRestoredRef.current = true;
+
     const raw = localStorage.getItem("session_tabs");
     const savedActive = localStorage.getItem("session_activeFilePath") ?? "";
     if (!raw) return;
@@ -93,22 +106,18 @@ export default function App() {
     if (!Array.isArray(savedTabs) || savedTabs.length === 0) return;
 
     (async () => {
-      let firstTab = true;
       let targetId: string | undefined;
+      const restoredPaths: string[] = [];
+
       for (const { filePath } of savedTabs) {
         try {
-          const content = await readTextFile(filePath);
-          if (firstTab) {
-            firstTab = false;
-            const active = tabsRef.current.tabs.find((t) => t.id === tabsRef.current.activeId)!;
-            if (active.filePath === null && active.content === "") {
-              tabsRef.current.openFileInTab(filePath, content, active.id);
-              if (filePath === savedActive) targetId = active.id;
-              continue;
-            }
-          }
-          tabsRef.current.newTab();
-          const newId = tabsRef.current.activeId;
+          const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+          const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+          const content = TEXT_EXTENSIONS.has(ext)
+            ? await readTextFile(filePath)
+            : `> このファイルは表示できません: \`${fileName}\``;
+          restoredPaths.push(filePath);
+          const newId = tabsRef.current.newTab();
           tabsRef.current.openFileInTab(filePath, content, newId);
           if (filePath === savedActive) targetId = newId;
         } catch {
@@ -116,18 +125,18 @@ export default function App() {
         }
       }
       if (targetId) tabsRef.current.switchTab(targetId);
-      tabsRef.current.pruneEmptyTabs();
+      tabsRef.current.pruneEmptyTabs(); // 起動時の初期空タブを除去
+      localStorage.setItem("session_tabs", JSON.stringify(restoredPaths.map((fp) => ({ filePath: fp }))));
+      localStorage.setItem("session_activeFilePath", restoredPaths.includes(savedActive) ? savedActive : (restoredPaths.at(-1) ?? ""));
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // セッション保存（タブ変化のたび）
+  // セッション保存（タブ変化のたび・復元完了後のみ）
   useEffect(() => {
-    const toSave = tabs.tabs
-      .filter((t) => t.filePath !== null)
-      .map((t) => ({ filePath: t.filePath! }));
-    localStorage.setItem("session_tabs", JSON.stringify(toSave));
-    localStorage.setItem("session_activeFilePath", tabs.activeFilePath ?? "");
+    if (!sessionRestoredRef.current) return;
+    saveSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.tabs, tabs.activeFilePath]);
 
   // ウィンドウサイズの復元
@@ -464,6 +473,7 @@ export default function App() {
         onClose={handleCloseTab}
         onCloseOthers={handleCloseOtherTabs}
         onCloseAll={handleCloseAllTabs}
+        onReorder={tabs.reorderTabs}
       />
       <div className="flex flex-1 overflow-hidden">
         {isExplorerOpen && (
