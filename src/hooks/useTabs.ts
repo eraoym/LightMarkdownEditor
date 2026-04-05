@@ -58,6 +58,7 @@ export interface UseTabsReturn {
   prevTab: () => void;
   findTabByPath: (p: string) => string | undefined;
   openFileInTab: (path: string, content: string, targetId?: string) => void;
+  pruneEmptyTabs: () => void;
 
   setActiveContent: (v: string) => void;
   setActiveContentImmediate: (v: string) => void;
@@ -80,6 +81,24 @@ export function useTabs(): UseTabsReturn {
     const tab = createEmptyTab();
     tabsDataRef.current = [...tabsDataRef.current, tab];
     activeIdRef.current = tab.id;
+    bump();
+  }, [bump]);
+
+  const pruneEmptyTabs = useCallback(() => {
+    const tabs = tabsDataRef.current;
+    const nonEmpty = tabs.filter(
+      (t) => !(t.filePath === null && t.content === "" && t.saveState === "saved")
+    );
+    if (nonEmpty.length === 0 || nonEmpty.length === tabs.length) return;
+    for (const tab of tabs) {
+      if (!nonEmpty.includes(tab) && tab.historyTimer) {
+        clearTimeout(tab.historyTimer);
+      }
+    }
+    if (!nonEmpty.find((t) => t.id === activeIdRef.current)) {
+      activeIdRef.current = nonEmpty[nonEmpty.length - 1].id;
+    }
+    tabsDataRef.current = nonEmpty;
     bump();
   }, [bump]);
 
@@ -282,6 +301,7 @@ export function useTabs(): UseTabsReturn {
     prevTab,
     findTabByPath,
     openFileInTab,
+    pruneEmptyTabs,
     setActiveContent,
     setActiveContentImmediate,
     setActiveSaveState,

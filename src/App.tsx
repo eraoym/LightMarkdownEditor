@@ -116,6 +116,7 @@ export default function App() {
         }
       }
       if (targetId) tabsRef.current.switchTab(targetId);
+      tabsRef.current.pruneEmptyTabs();
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -377,6 +378,7 @@ export default function App() {
         for (const path of filePaths) {
           await handleOpenFileFromExplorer(path);
         }
+        tabsRef.current.pruneEmptyTabs();
       }, 300);
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
