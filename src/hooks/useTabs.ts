@@ -49,7 +49,7 @@ export interface UseTabsReturn {
   activeFilePath: string | null;
   activeSaveState: SaveState;
 
-  newTab: () => void;
+  newTab: () => string;
   closeTab: (id: string) => void;
   closeOtherTabs: (id: string) => void;
   closeAllTabs: () => void;
@@ -59,6 +59,7 @@ export interface UseTabsReturn {
   findTabByPath: (p: string) => string | undefined;
   openFileInTab: (path: string, content: string, targetId?: string) => void;
   pruneEmptyTabs: () => void;
+  reorderTabs: (fromIndex: number, toIndex: number) => void;
 
   setActiveContent: (v: string) => void;
   setActiveContentImmediate: (v: string) => void;
@@ -82,6 +83,7 @@ export function useTabs(): UseTabsReturn {
     tabsDataRef.current = [...tabsDataRef.current, tab];
     activeIdRef.current = tab.id;
     bump();
+    return tab.id;
   }, [bump]);
 
   const pruneEmptyTabs = useCallback(() => {
@@ -99,6 +101,15 @@ export function useTabs(): UseTabsReturn {
       activeIdRef.current = nonEmpty[nonEmpty.length - 1].id;
     }
     tabsDataRef.current = nonEmpty;
+    bump();
+  }, [bump]);
+
+  const reorderTabs = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const tabs = [...tabsDataRef.current];
+    const [moved] = tabs.splice(fromIndex, 1);
+    tabs.splice(toIndex, 0, moved);
+    tabsDataRef.current = tabs;
     bump();
   }, [bump]);
 
@@ -302,6 +313,7 @@ export function useTabs(): UseTabsReturn {
     findTabByPath,
     openFileInTab,
     pruneEmptyTabs,
+    reorderTabs,
     setActiveContent,
     setActiveContentImmediate,
     setActiveSaveState,

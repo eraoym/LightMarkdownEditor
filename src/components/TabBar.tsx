@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TabData } from "../types";
 
 interface ContextMenuState {
@@ -15,6 +15,7 @@ interface TabBarProps {
   onClose: (id: string) => void;
   onCloseOthers: (id: string) => void;
   onCloseAll: () => void;
+  onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
 export default function TabBar({
@@ -25,8 +26,13 @@ export default function TabBar({
   onClose,
   onCloseOthers,
   onCloseAll,
+  onReorder,
 }: TabBarProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragStateRef = useRef<{ fromIndex: number; overIndex: number } | null>(null);
+  const dragMovedRef = useRef(false);
+  const tabListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -39,6 +45,42 @@ export default function TabBar({
     };
   }, [contextMenu]);
 
+  const handleTabMouseDown = (e: React.MouseEvent, index: number) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return;
+
+    dragStateRef.current = { fromIndex: index, overIndex: index };
+    dragMovedRef.current = false;
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragStateRef.current || !tabListRef.current) return;
+      const children = Array.from(tabListRef.current.children) as HTMLElement[];
+      for (let i = 0; i < children.length; i++) {
+        const rect = children[i].getBoundingClientRect();
+        if (ev.clientX >= rect.left && ev.clientX <= rect.right) {
+          dragStateRef.current.overIndex = i;
+          setDragOverIndex(i);
+          if (i !== dragStateRef.current.fromIndex) dragMovedRef.current = true;
+          return;
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (dragStateRef.current) {
+        const { fromIndex, overIndex } = dragStateRef.current;
+        if (overIndex !== fromIndex) onReorder(fromIndex, overIndex);
+      }
+      dragStateRef.current = null;
+      setDragOverIndex(null);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
   return (
     <div className="flex items-center border-b border-zinc-200 dark:border-zinc-700 shrink-0 overflow-hidden">
       <button
@@ -49,21 +91,28 @@ export default function TabBar({
       >
         +
       </button>
-      <div className="flex overflow-hidden">
-        {tabs.map((tab) => {
+      <div ref={tabListRef} className="flex overflow-hidden">
+        {tabs.map((tab, index) => {
           const isActive = tab.id === activeId;
+          const isDragOver = dragOverIndex === index;
           const label = tab.filePath
             ? (tab.filePath.split(/[\\/]/).pop() ?? tab.filePath)
             : "新規ファイル";
           return (
             <div
               key={tab.id}
-              className={`max-w-[160px] shrink-0 flex items-center gap-1 px-3 h-8 text-sm border-r border-zinc-200 dark:border-zinc-700 cursor-pointer ${
-                isActive
+              onMouseDown={(e) => handleTabMouseDown(e, index)}
+              className={`max-w-[160px] shrink-0 flex items-center gap-1 px-3 h-8 text-sm border-r border-zinc-200 dark:border-zinc-700 cursor-pointer select-none ${
+                isDragOver
+                  ? "bg-blue-100 dark:bg-blue-900/40"
+                  : isActive
                   ? "bg-white dark:bg-zinc-900"
                   : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-750"
               }`}
-              onClick={() => onSwitch(tab.id)}
+              onClick={() => {
+                if (dragMovedRef.current) { dragMovedRef.current = false; return; }
+                onSwitch(tab.id);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
