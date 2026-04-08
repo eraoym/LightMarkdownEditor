@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { toSlug } from "../utils/slug";
+import { stripFrontMatter } from "../utils/frontMatter";
 
 interface Heading {
   level: number;
@@ -24,7 +25,7 @@ function stripFencedCodeBlocks(markdown: string): string {
 }
 
 function extractHeadings(markdown: string): Heading[] {
-  const stripped = stripFencedCodeBlocks(markdown);
+  const stripped = stripFencedCodeBlocks(stripFrontMatter(markdown));
   const results: Heading[] = [];
   const regex = /^(#{1,6})\s+(.+)$/gm;
   let match: RegExpExecArray | null;

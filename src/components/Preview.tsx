@@ -7,6 +7,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import mermaid from "mermaid";
 import hljs from "highlight.js";
 import { toSlug } from "../utils/slug";
+import { stripFrontMatter } from "../utils/frontMatter";
 import type { PreviewTheme } from "../types";
 import githubCss from "../styles/themes/github.css?raw";
 import minimalCss from "../styles/themes/minimal.css?raw";
@@ -187,7 +188,7 @@ export default function Preview({ markdown, filePath, isDark, previewTheme, scro
           h6({ children }) { return <h6 id={headingId(children)}>{children}</h6>; },
         }}
       >
-        {markdown}
+        {stripFrontMatter(markdown)}
       </ReactMarkdown>
     </div>
   );

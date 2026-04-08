@@ -255,6 +255,7 @@ Editor の追加機能:
 - `.print-area hr` に `break-after: page` を指定することで、Markdown の `---` を改ページとして扱える
 - `MermaidDiagram` に `mermaid-diagram` クラスを付与し、SVG 背景を透明に上書きすることでライトモードの背景色問題を修正
 - `previewTheme` に対応する CSS を `src/styles/themes/` から `?raw` インポートし、`<style>` タグとして注入することでテーマを切替。CSS 変数（`--tw-prose-*` / `--tw-prose-invert-*`）でライト/ダーク両対応
+- 文書先頭の YAML front matter（`---` ... `---` で囲まれたブロック）はプレビュー・目次の対象外とする（Issue #14 対応）
 
 ---
 
