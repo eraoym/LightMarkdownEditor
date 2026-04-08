@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, Children, cloneElement, isValidElement } f
 import type { ReactElement, InputHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import mermaid from "mermaid";
@@ -117,6 +118,7 @@ export default function Preview({ markdown, filePath, isDark, previewTheme, scro
       <style>{THEME_CSS[previewTheme]}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           code({ className, children }) {
             const language = className?.replace("language-", "");
