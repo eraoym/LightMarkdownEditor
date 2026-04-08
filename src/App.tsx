@@ -149,12 +149,16 @@ export default function App() {
     }
   }, []);
 
-  // ウィンドウサイズの保存
+  // ウィンドウサイズの保存（最大化中はスキップ）
   useEffect(() => {
     const onResize = () => {
-      getCurrentWindow().innerSize().then((size) => {
-        localStorage.setItem("windowWidth", String(size.width));
-        localStorage.setItem("windowHeight", String(size.height));
+      const win = getCurrentWindow();
+      win.isMaximized().then((maximized) => {
+        if (maximized) return;
+        win.innerSize().then((size) => {
+          localStorage.setItem("windowWidth", String(size.width));
+          localStorage.setItem("windowHeight", String(size.height));
+        }).catch(console.error);
       }).catch(console.error);
     };
     window.addEventListener("resize", onResize);
