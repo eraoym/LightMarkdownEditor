@@ -23,6 +23,7 @@ export default function Toolbar({ actions }: ToolbarProps) {
     { label: "1.", title: "番号リスト", onClick: actions.orderedList },
     { label: "`", title: "コード", onClick: actions.code },
     { label: "⊞", title: "テーブル挿入", onClick: actions.table },
+    { label: "№", title: "見出し番号を再付与", onClick: actions.renewHeadingNumbers },
   ];
 
   return (

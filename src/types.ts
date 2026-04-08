@@ -7,6 +7,7 @@ export interface AppSettings {
   editorFontFamily: string;
   tabWidth: 2 | 4;
   previewTheme: PreviewTheme;
+  headingNumberStart: 1 | 2;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   editorFontFamily: "ui-monospace, monospace",
   tabWidth: 2,
   previewTheme: "github",
+  headingNumberStart: 1,
 };
 
 export interface TabData {

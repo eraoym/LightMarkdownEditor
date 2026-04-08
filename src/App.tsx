@@ -66,7 +66,8 @@ export default function App() {
   const editorActions = useEditorActions(
     textareaRef,
     tabs.activeContent,
-    tabs.setActiveContentImmediate
+    tabs.setActiveContentImmediate,
+    settings.headingNumberStart,
   );
   const editorActionsRef = useRef(editorActions);
   editorActionsRef.current = editorActions;

@@ -10,12 +10,14 @@ export interface EditorActions {
   orderedList: () => void;
   table: () => void;
   insertAtCursor: (text: string) => void;
+  renewHeadingNumbers: () => void;
 }
 
 export function useEditorActions(
   textareaRef: RefObject<HTMLTextAreaElement | null>,
   _markdown: string,
-  setMarkdown: (v: string) => void
+  setMarkdown: (v: string) => void,
+  headingNumberStart: 1 | 2 = 1,
 ): EditorActions {
   // selectionchange で常に最新の選択範囲を保存する
   // → ツールバークリックでフォーカスが外れても正しい位置を取得できる
@@ -152,6 +154,41 @@ export function useEditorActions(
     });
   }
 
+  function renewHeadingNumbers() {
+    const el = textareaRef.current;
+    if (!el) return;
+    const lines = el.value.split("\n");
+    const counters = [0, 0, 0, 0, 0, 0];
+    let inCodeBlock = false;
+
+    const newLines = lines.map((line) => {
+      if (line.startsWith("```")) {
+        inCodeBlock = !inCodeBlock;
+        return line;
+      }
+      if (inCodeBlock) return line;
+
+      const m = line.match(/^(#{1,6})\s+(.+)$/);
+      if (!m) return line;
+
+      const level = m[1].length;
+      const rawText = m[2];
+      // "1 ", "1.1 ", "1.1.1 " 形式の既存番号を除去
+      const cleanText = rawText.replace(/^(\d+\.)*\d+\s+/, "");
+
+      const relLevel = level - headingNumberStart + 1;
+      if (relLevel < 1) return line;
+
+      counters[relLevel - 1]++;
+      for (let i = relLevel; i < 6; i++) counters[i] = 0;
+
+      const numStr = counters.slice(0, relLevel).join(".");
+      return `${"#".repeat(level)} ${numStr} ${cleanText}`;
+    });
+
+    setMarkdown(newLines.join("\n"));
+  }
+
   return {
     bold: () => wrapSelection("**", "**"),
     italic: () => wrapSelection("*", "*"),
@@ -161,5 +198,6 @@ export function useEditorActions(
     orderedList: () => toggleLinePrefix("1. "),
     table: insertTable,
     insertAtCursor,
+    renewHeadingNumbers,
   };
 }

@@ -98,7 +98,7 @@ export default function SettingsModal({ settings, onChange, onClose }: SettingsM
         </div>
 
         {/* プレビューテーマ */}
-        <div className="mb-2">
+        <div className="mb-4">
           <label className="block text-sm mb-1">プレビューテーマ</label>
           <div className="flex gap-2">
             {PREVIEW_THEME_OPTIONS.map((opt) => (
@@ -112,6 +112,26 @@ export default function SettingsModal({ settings, onChange, onClose }: SettingsM
                 }`}
               >
                 {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 見出し番号付与開始レベル */}
+        <div className="mb-2">
+          <label className="block text-sm mb-1">見出し番号付与の開始レベル</label>
+          <div className="flex gap-2">
+            {([1, 2] as const).map((level) => (
+              <button
+                key={level}
+                onClick={() => onChange({ ...settings, headingNumberStart: level })}
+                className={`flex-1 text-sm py-1 rounded border ${
+                  settings.headingNumberStart === level
+                    ? "bg-blue-500 text-white border-blue-500"
+                    : "border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                }`}
+              >
+                H{level} から
               </button>
             ))}
           </div>
