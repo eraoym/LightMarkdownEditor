@@ -17,6 +17,7 @@ import { useTabs } from "./hooks/useTabs";
 import type { Mode, AppSettings } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
 
+/** テキストとして読み込める拡張子のセット。対象外はプレビュー不可メッセージを表示する */
 const TEXT_EXTENSIONS = new Set([
   "md", "txt", "json", "yaml", "yml", "toml", "csv",
   "ts", "tsx", "js", "jsx", "html", "css", "xml", "log",
@@ -56,6 +57,7 @@ export default function App() {
     parseInt(localStorage.getItem("tocWidth") ?? "220")
   );
   const [appVersion, setAppVersion] = useState("");
+  // アプリバージョンを取得してヘッダーに表示する
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
   }, []);
@@ -72,6 +74,7 @@ export default function App() {
   const editorActionsRef = useRef(editorActions);
   editorActionsRef.current = editorActions;
 
+  // アクティブファイルのパスに応じてウィンドウタイトルを更新する
   useEffect(() => {
     const filePath = tabsRef.current.activeFilePath;
     const fileName = filePath?.split(/[\\/]/).pop() ?? null;
@@ -84,9 +87,11 @@ export default function App() {
     localStorage.setItem("app_settings", JSON.stringify(settings));
   }, [settings]);
 
-  // セッション復元（前回開いていたタブ）
+  // 起動時にlocalStorageから前回のタブセッションを復元する
+  // StrictMode の二重実行を防ぐため sessionRestoredRef でガードする
   const sessionRestoredRef = useRef(false);
 
+  /** 現在開いているタブのファイルパス一覧とアクティブパスをlocalStorageに保存する */
   const saveSession = useCallback(() => {
     const toSave = tabsRef.current.tabs
       .filter((t) => t.filePath !== null)
@@ -172,6 +177,7 @@ export default function App() {
     const preview = previewScrollRef.current;
     if (!editor || !preview) return;
 
+    /** エディタのスクロール位置をプレビューに比率で同期する */
     const onEditorScroll = () => {
       if (isSyncingScroll.current) return;
       isSyncingScroll.current = true;
@@ -181,6 +187,7 @@ export default function App() {
       isSyncingScroll.current = false;
     };
 
+    /** プレビューのスクロール位置をエディタに比率で同期する */
     const onPreviewScroll = () => {
       if (isSyncingScroll.current) return;
       isSyncingScroll.current = true;
@@ -198,6 +205,10 @@ export default function App() {
     };
   }, [isSplitPreview]);
 
+  /**
+   * ファイル選択ダイアログを開き、選択したファイルをタブで開く
+   * 既に同パスのタブが開いている場合はそのタブへ切り替える
+   */
   const handleOpen = useCallback(async () => {
     const selected = await open({
       filters: [{ name: "Markdown", extensions: ["md", "txt"] }],
@@ -221,6 +232,10 @@ export default function App() {
     }
   }, []);
 
+  /**
+   * アクティブタブの内容をファイルに保存する
+   * ファイルパスが未設定の場合は「名前を付けて保存」ダイアログを表示する
+   */
   const handleSave = useCallback(async () => {
     tabsRef.current.setActiveSaveState("saving");
     let targetPath = tabsRef.current.activeFilePath;
@@ -242,6 +257,10 @@ export default function App() {
     tabsRef.current.setActiveSaveState("saved");
   }, []);
 
+  /**
+   * 未保存ファイルの確認ダイアログを表示した上で、指定タブ以外をすべて閉じる
+   * @param id - 残すタブのID
+   */
   const handleCloseOtherTabs = useCallback(async (id: string) => {
     const unsaved = tabsRef.current.tabs.filter(
       (t) => t.id !== id && t.saveState === "unsaved"
@@ -256,6 +275,7 @@ export default function App() {
     tabsRef.current.closeOtherTabs(id);
   }, []);
 
+  /** 未保存ファイルの確認ダイアログを表示した上で、全タブを閉じる */
   const handleCloseAllTabs = useCallback(async () => {
     const unsaved = tabsRef.current.tabs.filter((t) => t.saveState === "unsaved");
     if (unsaved.length > 0) {
@@ -268,6 +288,10 @@ export default function App() {
     tabsRef.current.closeAllTabs();
   }, []);
 
+  /**
+   * 未保存の場合は確認ダイアログを表示した上で、指定タブを閉じる
+   * @param id - 閉じるタブのID
+   */
   const handleCloseTab = useCallback(async (id: string) => {
     const tab = tabsRef.current.tabs.find((t) => t.id === id);
     if (tab?.saveState === "unsaved") {
@@ -281,6 +305,11 @@ export default function App() {
     tabsRef.current.closeTab(id);
   }, []);
 
+  /**
+   * プレビュー上のチェックボックスクリックに応じてMarkdownソースを書き換える
+   * `- [ ]` と `- [x]` を相互にトグルする
+   * @param line - チェックボックスがある行番号（1-indexed）
+   */
   const handleCheckboxToggle = useCallback((line: number) => {
     const content = tabsRef.current.activeContent;
     const lines = content.split("\n");
@@ -296,6 +325,13 @@ export default function App() {
     tabsRef.current.setActiveContentImmediate(lines.join("\n"));
   }, []);
 
+  /**
+   * 貼り付けられた画像BlobをMarkdownファイルと同階層の `image/` ディレクトリに保存し、
+   * カーソル位置にMarkdown画像リンクを挿入する
+   * @param blob - 貼り付け画像のBlob
+   * @param start - 挿入開始位置（セレクション先頭）
+   * @param end - 挿入終了位置（セレクション末尾）
+   */
   const handleImagePaste = useCallback(async (blob: Blob, start: number, end: number) => {
     const filePath = tabsRef.current.activeFilePath;
     if (!filePath) return;
@@ -325,6 +361,11 @@ export default function App() {
     });
   }, []);
 
+  /**
+   * エクスプローラー・ドラッグ&ドロップ・起動引数から指定パスのファイルを開く
+   * 既に同パスのタブがある場合は切替のみ行う。await 後に再チェックして二重オープンを防止する
+   * @param path - 開くファイルの絶対パス
+   */
   const handleOpenFileFromExplorer = useCallback(async (path: string) => {
     const existingId = tabsRef.current.findTabByPath(path);
     if (existingId) {
@@ -398,7 +439,9 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // グローバルキーボードショートカットを登録する（Ctrl/Cmd + キー）
   useEffect(() => {
+    /** 保存・書式・履歴・タブ切替・日時挿入などのショートカットを処理する */
     const onKeyDown = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.key === "s") {

@@ -13,6 +13,14 @@ export interface EditorActions {
   renewHeadingNumbers: () => void;
 }
 
+/**
+ * エディタのMarkdown編集アクション群を提供するフック
+ * ツールバーやキーボードショートカットから呼び出す
+ * @param textareaRef - エディタの `<textarea>` への ref
+ * @param _markdown - 現在のMarkdown内容（選択範囲保存のトリガーとして使用）
+ * @param setMarkdown - Markdown内容を更新するコールバック
+ * @param headingNumberStart - 見出し番号を付与し始めるレベル（1 or 2）
+ */
 export function useEditorActions(
   textareaRef: RefObject<HTMLTextAreaElement | null>,
   _markdown: string,
@@ -23,7 +31,9 @@ export function useEditorActions(
   // → ツールバークリックでフォーカスが外れても正しい位置を取得できる
   const savedSel = useRef({ start: 0, end: 0 });
 
+  // エディタがフォーカスを持つ間、selectionchange イベントで選択範囲をキャッシュする
   useEffect(() => {
+    /** エディタがアクティブな場合のみ選択範囲を savedSel に保存する */
     const handler = () => {
       const el = textareaRef.current;
       if (el && document.activeElement === el) {
@@ -140,6 +150,10 @@ export function useEditorActions(
     });
   }
 
+  /**
+   * カーソル位置（または選択範囲）に任意テキストを挿入する
+   * @param text - 挿入するテキスト
+   */
   function insertAtCursor(text: string) {
     const el = textareaRef.current;
     if (!el) return;

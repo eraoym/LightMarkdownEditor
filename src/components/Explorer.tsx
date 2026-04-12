@@ -16,6 +16,12 @@ interface ExplorerProps {
   initialFolder?: string;
 }
 
+/**
+ * 指定ディレクトリの直下エントリを読み込みツリーノード配列として返す
+ * ディレクトリが先、ファイルが後になるようソートする
+ * @param dirPath - 読み込み対象のディレクトリパス
+ * @returns ソート済みのツリーノード配列
+ */
 async function loadChildren(dirPath: string): Promise<TreeNode[]> {
   const entries = await readDir(dirPath);
   // Windows は "\" 、Unix は "/" — 親パスのセパレータに合わせる
@@ -38,6 +44,14 @@ async function loadChildren(dirPath: string): Promise<TreeNode[]> {
   return nodes;
 }
 
+/**
+ * ツリーノード配列を再帰的に走査し、対象パスの展開状態と子ノードを更新する
+ * @param nodes - 更新対象のノード配列
+ * @param targetPath - 更新するノードのパス
+ * @param newChildren - 新しい子ノード配列
+ * @param isExpanded - 展開状態
+ * @returns 更新後の新しいノード配列
+ */
 function updateNodeExpanded(
   nodes: TreeNode[],
   targetPath: string,
@@ -58,6 +72,10 @@ function updateNodeExpanded(
   });
 }
 
+/**
+ * ファイルエクスプローラーコンポーネント
+ * フォルダツリーを表示し、ファイルをクリックして開いたりフォルダを展開/折り畳みできる
+ */
 export default function Explorer({ onOpenFile, width, initialFolder }: ExplorerProps) {
   const [rootPath, setRootPath] = useState<string | null>(null);
   const [tree, setTree] = useState<TreeNode[]>([]);
@@ -76,6 +94,7 @@ export default function Explorer({ onOpenFile, width, initialFolder }: ExplorerP
     loadChildren(initialFolder).then(setTree).catch(() => {});
   }, [initialFolder]);
 
+  /** フォルダ選択ダイアログを開き、選択されたフォルダをルートとしてツリーを構築する */
   const handleSelectFolder = async () => {
     const selected = await open({ directory: true });
     if (typeof selected !== "string") return;
@@ -102,6 +121,11 @@ export default function Explorer({ onOpenFile, width, initialFolder }: ExplorerP
     }
   };
 
+  /**
+   * ツリーノード配列を再帰的にJSX要素としてレンダリングする
+   * @param nodes - レンダリングするノード配列
+   * @param depth - 現在の階層深さ（インデント量の計算に使用）
+   */
   const renderNodes = (nodes: TreeNode[], depth: number): React.ReactNode => {
     return nodes.map((node) => (
       <div key={node.path}>

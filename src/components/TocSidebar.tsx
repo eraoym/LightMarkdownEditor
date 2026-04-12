@@ -20,10 +20,22 @@ function stripInlineMarkdown(text: string): string {
     .trim();
 }
 
+/**
+ * コードブロック（` ``` ` フェンス）を除去する
+ * コードブロック内の `#` を見出しとして誤検出しないための前処理
+ * @param markdown - 処理対象のMarkdown文字列
+ * @returns コードブロックを除いたMarkdown文字列
+ */
 function stripFencedCodeBlocks(markdown: string): string {
   return markdown.replace(/^`{3,}[^\n]*\n[\s\S]*?^`{3,}[ \t]*$/gm, "");
 }
 
+/**
+ * Markdownから見出し一覧を抽出する
+ * フロントマターとコードブロックを除いた上で `#` 〜 `######` を解析する
+ * @param markdown - 解析対象のMarkdown文字列
+ * @returns レベル・テキスト・スラッグIDを持つ見出しオブジェクトの配列
+ */
 function extractHeadings(markdown: string): Heading[] {
   const stripped = stripFencedCodeBlocks(stripFrontMatter(markdown));
   const results: Heading[] = [];
@@ -36,6 +48,10 @@ function extractHeadings(markdown: string): Heading[] {
   return results;
 }
 
+/**
+ * 目次サイドバーコンポーネント
+ * Markdownの見出しを一覧表示し、クリックで該当箇所へスクロールナビゲーションする
+ */
 export default function TocSidebar({
   markdown,
   width,

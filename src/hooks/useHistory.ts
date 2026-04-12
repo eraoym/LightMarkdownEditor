@@ -1,8 +1,14 @@
 import { useCallback, useRef, useState } from "react";
 
+/** 履歴スタックの最大保持件数 */
 const MAX_HISTORY = 200;
+/** タイピング入力を履歴にコミットするまでのデバウンス時間（ms） */
 const DEBOUNCE_MS = 500;
 
+/**
+ * テキストの編集履歴（アンドゥ/リドゥ）を管理するフック
+ * @param initial - 初期テキスト値
+ */
 export function useHistory(initial: string) {
   const stack = useRef<string[]>([initial]);
   const cursor = useRef(0);
@@ -10,6 +16,10 @@ export function useHistory(initial: string) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<string | null>(null);
 
+  /**
+   * 現在値を履歴スタックに即時コミットする（デバウンスなし）
+   * @param v - コミットする文字列
+   */
   const commitNow = useCallback((v: string) => {
     const top = stack.current[cursor.current];
     if (v === top) return;
@@ -19,6 +29,7 @@ export function useHistory(initial: string) {
     else cursor.current++;
   }, []);
 
+  /** デバウンス中の保留エントリを今すぐ履歴に確定させる */
   const flushPending = useCallback(() => {
     if (timer.current) {
       clearTimeout(timer.current);
@@ -67,6 +78,10 @@ export function useHistory(initial: string) {
     setValue(v);
   }, []);
 
+  /**
+   * 履歴を1ステップ戻す
+   * @returns 戻した場合は `true`、これ以上戻れない場合は `false`
+   */
   const undo = useCallback(() => {
     // デバウンス中の変更があれば先にコミットしてから戻る
     flushPending();
@@ -78,6 +93,10 @@ export function useHistory(initial: string) {
     return false;
   }, [flushPending]);
 
+  /**
+   * 履歴を1ステップ進める
+   * @returns 進めた場合は `true`、これ以上進めない場合は `false`
+   */
   const redo = useCallback(() => {
     if (cursor.current < stack.current.length - 1) {
       cursor.current++;

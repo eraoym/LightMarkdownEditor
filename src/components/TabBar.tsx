@@ -18,6 +18,10 @@ interface TabBarProps {
   onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
+/**
+ * タブバーコンポーネント
+ * タブの表示・切替・閉じる操作とドラッグによる並び替えを提供する
+ */
 export default function TabBar({
   tabs,
   activeId,
@@ -45,6 +49,12 @@ export default function TabBar({
     };
   }, [contextMenu]);
 
+  /**
+   * タブのドラッグ並び替えを開始するマウスダウンハンドラ
+   * 左クリックかつ閉じるボタン以外の領域でドラッグを開始する
+   * @param e - Reactのマウスイベント
+   * @param index - ドラッグ開始タブのインデックス
+   */
   const handleTabMouseDown = (e: React.MouseEvent, index: number) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button")) return;
@@ -52,6 +62,7 @@ export default function TabBar({
     dragStateRef.current = { fromIndex: index, overIndex: index };
     dragMovedRef.current = false;
 
+    /** ドラッグ中のカーソル位置からホバー中のタブインデックスを計算し並び替え候補を更新する */
     const handleMouseMove = (ev: MouseEvent) => {
       if (!dragStateRef.current || !tabListRef.current) return;
       const children = Array.from(tabListRef.current.children) as HTMLElement[];
@@ -66,6 +77,7 @@ export default function TabBar({
       }
     };
 
+    /** ドラッグ終了時に並び替えを確定しイベントリスナーをクリーンアップする */
     const handleMouseUp = () => {
       if (dragStateRef.current) {
         const { fromIndex, overIndex } = dragStateRef.current;

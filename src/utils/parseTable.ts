@@ -1,3 +1,9 @@
+/**
+ * 区切り文字付きテキストをMarkdownテーブル形式に変換する
+ * @param text - 変換元テキスト（1行目をヘッダとして扱う）
+ * @param delimiter - 列の区切り文字（例: `","` や `"\t"`）
+ * @returns Markdown テーブル文字列
+ */
 export function parseToMarkdownTable(text: string, delimiter: string): string {
   const lines = text.trim().split("\n").map(line =>
     line.split(delimiter).map(cell => cell.trim())
