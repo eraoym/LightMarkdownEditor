@@ -1,14 +1,64 @@
-import { useEffect, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { useRef } from "react";
+import {
+  TreeNode,
+  InlineInputState,
+  useExplorer,
+} from "../hooks/useExplorer";
 
-interface TreeNode {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  isExpanded: boolean;
-  children: TreeNode[] | null;
+// ---------------------------------------------------------------------------
+// インライン入力コンポーネント
+// ---------------------------------------------------------------------------
+
+interface InlineInputRowProps {
+  depth: number;
+  state: InlineInputState;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
 }
+
+function InlineInputRow({ depth, state, onChange, onCommit, onCancel }: InlineInputRowProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const committedRef = useRef(false);
+
+  // マウント時にフォーカス
+  const setFocus = (el: HTMLInputElement | null) => {
+    inputRef.current = el;
+    el?.focus();
+  };
+
+  const commit = () => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    onCommit();
+  };
+
+  return (
+    <div
+      className="flex items-center gap-1 py-0.5"
+      style={{ paddingLeft: depth * 12 + 8 }}
+    >
+      <span className="shrink-0 text-xs">
+        {state.type === "directory" ? "▶" : "　"}
+      </span>
+      <input
+        ref={setFocus}
+        className="flex-1 text-sm bg-transparent border-b border-blue-500 focus:outline-none dark:text-zinc-100"
+        value={state.value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); commit(); }
+          if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        }}
+        onBlur={commit}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Explorer コンポーネント
+// ---------------------------------------------------------------------------
 
 interface ExplorerProps {
   onOpenFile: (path: string) => void;
@@ -17,156 +67,187 @@ interface ExplorerProps {
 }
 
 /**
- * 指定ディレクトリの直下エントリを読み込みツリーノード配列として返す
- * ディレクトリが先、ファイルが後になるようソートする
- * @param dirPath - 読み込み対象のディレクトリパス
- * @returns ソート済みのツリーノード配列
- */
-async function loadChildren(dirPath: string): Promise<TreeNode[]> {
-  const entries = await readDir(dirPath);
-  // Windows は "\" 、Unix は "/" — 親パスのセパレータに合わせる
-  const sep = dirPath.includes("\\") ? "\\" : "/";
-  const base = dirPath.replace(/[/\\]+$/, ""); // 末尾セパレータを除去
-  const nodes: TreeNode[] = entries
-    .filter((e) => e.name != null)
-    .map((e) => ({
-      name: e.name!,
-      path: base + sep + e.name!,
-      isDirectory: e.isDirectory ?? false,
-      isExpanded: false,
-      children: e.isDirectory ? null : [],
-    }));
-
-  nodes.sort((a, b) => {
-    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
-  return nodes;
-}
-
-/**
- * ツリーノード配列を再帰的に走査し、対象パスの展開状態と子ノードを更新する
- * @param nodes - 更新対象のノード配列
- * @param targetPath - 更新するノードのパス
- * @param newChildren - 新しい子ノード配列
- * @param isExpanded - 展開状態
- * @returns 更新後の新しいノード配列
- */
-function updateNodeExpanded(
-  nodes: TreeNode[],
-  targetPath: string,
-  newChildren: TreeNode[],
-  isExpanded: boolean
-): TreeNode[] {
-  return nodes.map((n) => {
-    if (n.path === targetPath) {
-      return { ...n, isExpanded, children: newChildren };
-    }
-    if (n.children && n.children.length > 0) {
-      return {
-        ...n,
-        children: updateNodeExpanded(n.children, targetPath, newChildren, isExpanded),
-      };
-    }
-    return n;
-  });
-}
-
-/**
  * ファイルエクスプローラーコンポーネント
- * フォルダツリーを表示し、ファイルをクリックして開いたりフォルダを展開/折り畳みできる
+ * フォルダツリーを表示し、右クリックメニュー・D&D・リアルタイム更新に対応する
  */
 export default function Explorer({ onOpenFile, width, initialFolder }: ExplorerProps) {
-  const [rootPath, setRootPath] = useState<string | null>(null);
-  const [tree, setTree] = useState<TreeNode[]>([]);
+  const {
+    rootPath,
+    tree,
+    contextMenu,
+    inlineInput,
+    dragState,
+    dropTargetPath,
+    handleSelectFolder,
+    handleToggleNode,
+    handleContextMenu,
+    handleContextMenuAction,
+    handleInlineChange,
+    handleInlineCommit,
+    handleInlineCancel,
+    handleNodeMouseDown,
+  } = useExplorer(onOpenFile, initialFolder);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("explorerPath");
-    if (!saved) return;
-    setRootPath(saved);
-    loadChildren(saved).then(setTree).catch(() => {});
-  }, []);
+  // ---------------------------------------------------------------------------
+  // ツリーレンダリング
+  // ---------------------------------------------------------------------------
 
-  useEffect(() => {
-    if (!initialFolder) return;
-    setRootPath(initialFolder);
-    localStorage.setItem("explorerPath", initialFolder);
-    loadChildren(initialFolder).then(setTree).catch(() => {});
-  }, [initialFolder]);
-
-  /** フォルダ選択ダイアログを開き、選択されたフォルダをルートとしてツリーを構築する */
-  const handleSelectFolder = async () => {
-    const selected = await open({ directory: true, defaultPath: rootPath ?? undefined });
-    if (typeof selected !== "string") return;
-    setRootPath(selected);
-    localStorage.setItem("explorerPath", selected);
-    const children = await loadChildren(selected);
-    setTree(children);
-  };
-
-  const handleToggleNode = async (node: TreeNode) => {
-    if (!node.isDirectory) {
-      onOpenFile(node.path);
-      return;
-    }
-    if (node.isExpanded) {
-      setTree((prev) => updateNodeExpanded(prev, node.path, node.children ?? [], false));
-      return;
-    }
-    try {
-      const children = node.children === null ? await loadChildren(node.path) : node.children;
-      setTree((prev) => updateNodeExpanded(prev, node.path, children, true));
-    } catch (e) {
-      console.error("フォルダ展開エラー:", node.path, e);
-    }
-  };
-
-  /**
-   * ツリーノード配列を再帰的にJSX要素としてレンダリングする
-   * @param nodes - レンダリングするノード配列
-   * @param depth - 現在の階層深さ（インデント量の計算に使用）
-   */
   const renderNodes = (nodes: TreeNode[], depth: number): React.ReactNode => {
-    return nodes.map((node) => (
-      <div key={node.path}>
-        <button
-          className="w-full text-left flex items-center gap-1 py-0.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded truncate"
-          style={{ paddingLeft: depth * 12 + 8 }}
-          onClick={() => handleToggleNode(node)}
-          title={node.path}
-        >
-          <span className="shrink-0 text-xs">
-            {node.isDirectory ? (node.isExpanded ? "▼" : "▶") : "　"}
-          </span>
-          <span className="truncate">{node.name}</span>
-        </button>
-        {node.isDirectory && node.isExpanded && node.children && (
-          <div>{renderNodes(node.children, depth + 1)}</div>
+    const items: React.ReactNode[] = [];
+
+    // ルート直下へのインライン入力（背景右クリックまたはルートフォルダ操作時）
+    if (depth === 0 && inlineInput && inlineInput.parentPath === rootPath) {
+      items.push(
+        <InlineInputRow
+          key="__inline_root__"
+          depth={0}
+          state={inlineInput}
+          onChange={handleInlineChange}
+          onCommit={handleInlineCommit}
+          onCancel={handleInlineCancel}
+        />
+      );
+    }
+
+    for (const node of nodes) {
+      const isDropTarget = dropTargetPath === node.path;
+      const isDragging = dragState?.sourcePath === node.path;
+
+      items.push(
+        <div key={node.path}>
+          <button
+            data-node-path={node.path}
+            data-is-dir={node.isDirectory.toString()}
+            className={[
+              "w-full text-left flex items-center gap-1 py-0.5 text-sm rounded truncate",
+              "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+              isDropTarget ? "bg-blue-100 dark:bg-blue-900/40 ring-1 ring-blue-400" : "",
+              isDragging ? "opacity-50" : "",
+            ].join(" ")}
+            style={{ paddingLeft: depth * 12 + 8 }}
+            title={node.path}
+            onClick={() => handleToggleNode(node)}
+            onContextMenu={(e) => handleContextMenu(e, node)}
+            onMouseDown={(e) => handleNodeMouseDown(e, node)}
+          >
+            <span className="shrink-0 text-xs" data-node-path={node.path} data-is-dir={node.isDirectory.toString()}>
+              {node.isDirectory ? (node.isExpanded ? "▼" : "▶") : "　"}
+            </span>
+            <span className="truncate" data-node-path={node.path} data-is-dir={node.isDirectory.toString()}>{node.name}</span>
+          </button>
+
+          {/* フォルダ展開中: 子ノードの先頭にインライン入力をインジェクト */}
+          {node.isDirectory && node.isExpanded && (
+            <div>
+              {inlineInput && inlineInput.parentPath === node.path && (
+                <InlineInputRow
+                  key="__inline__"
+                  depth={depth + 1}
+                  state={inlineInput}
+                  onChange={handleInlineChange}
+                  onCommit={handleInlineCommit}
+                  onCancel={handleInlineCancel}
+                />
+              )}
+              {node.children && renderNodes(node.children, depth + 1)}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return items;
+  };
+
+  // ---------------------------------------------------------------------------
+  // コンテキストメニュー
+  // ---------------------------------------------------------------------------
+
+  const renderContextMenu = () => {
+    if (!contextMenu) return null;
+
+    const isBackground = contextMenu.kind === "background";
+    const isDirectory = contextMenu.kind === "directory";
+
+    return (
+      <div
+        className="fixed z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded shadow-lg py-1 text-sm min-w-36"
+        style={{ left: contextMenu.x, top: contextMenu.y }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {(isBackground || isDirectory) && (
+          <>
+            <button
+              className="w-full text-left px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              onClick={() => handleContextMenuAction("new-file")}
+            >
+              新しいファイル
+            </button>
+            <button
+              className="w-full text-left px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              onClick={() => handleContextMenuAction("new-folder")}
+            >
+              新しいフォルダ
+            </button>
+          </>
+        )}
+        {!isBackground && (
+          <>
+            {isDirectory && (
+              <div className="border-t border-zinc-200 dark:border-zinc-600 my-1" />
+            )}
+            <button
+              className="w-full text-left px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-red-600 dark:text-red-400"
+              onClick={() => handleContextMenuAction("delete")}
+            >
+              削除
+            </button>
+          </>
         )}
       </div>
-    ));
+    );
   };
 
-  return (
-    <div className="shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 overflow-hidden" style={{ width }}>
+  // ---------------------------------------------------------------------------
+  // レンダリング
+  // ---------------------------------------------------------------------------
 
+  return (
+    <div
+      className="shrink-0 flex flex-col border-r border-zinc-200 dark:border-zinc-700 overflow-hidden"
+      style={{ width }}
+      onContextMenu={(e) => handleContextMenu(e)}
+    >
+      {/* フォルダ選択ボタン（ルートへのドロップターゲットも兼ねる） */}
       <div className="px-2 py-1 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
         <button
+          data-node-path={rootPath ?? ""}
+          data-is-dir="true"
           onClick={handleSelectFolder}
-          className="w-full text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 truncate"
+          className={[
+            "w-full text-xs px-2 py-1 rounded border truncate",
+            dropTargetPath === rootPath && rootPath
+              ? "border-blue-400 bg-blue-100 dark:bg-blue-900/40"
+              : "border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800",
+          ].join(" ")}
           title={rootPath ?? "フォルダを選択"}
         >
           {rootPath ? rootPath.split(/[\\/]/).pop() : "フォルダを選択"}
         </button>
       </div>
+
+      {/* ツリー */}
       <div className="flex-1 overflow-y-auto px-1 py-1">
-        {tree.length === 0 && (
+        {tree.length === 0 && !inlineInput && (
           <p className="text-xs text-zinc-400 px-2 py-2">
             {rootPath ? "空のフォルダ" : "フォルダを選択してください"}
           </p>
         )}
         {renderNodes(tree, 0)}
       </div>
+
+      {/* コンテキストメニュー */}
+      {renderContextMenu()}
     </div>
   );
 }

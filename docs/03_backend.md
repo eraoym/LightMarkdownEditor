@@ -1,6 +1,6 @@
 # 03 バックエンド設計（Tauri ファイル操作）
 
-> 最終更新: 2026-03-15
+> 最終更新: 2026-04-15（Issue #16: remove / rename パーミッション追加）
 
 ---
 
@@ -68,9 +68,15 @@ pub fn run() {
     "fs:allow-write-text-file",
     "fs:allow-exists",
     "dialog:allow-open",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    { "identifier": "fs:allow-remove", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-rename", "allow": [{ "path": "**" }] }
   ]
 }
+```
+
+> `fs:allow-remove` はファイル・ディレクトリ両方に対応（`recursive: true` オプションでフォルダごと削除）。  
+> `fs:allow-rename` はファイル/フォルダの名前変更・移動に使用（D&D 移動の実装に利用）。
 ```
 
 ---
@@ -240,3 +246,5 @@ fn get_startup_args() -> Vec<String> {
 | `src-tauri/capabilities/default.json` | fs / dialog / stat のパーミッション追加 |
 | `src/App.tsx` | `openFile` / `saveFile` 呼び出しロジック + D&D 処理 |
 | `package.json` (pnpm) | `@tauri-apps/plugin-fs`, `@tauri-apps/plugin-dialog` 追加 |
+| `src/hooks/useExplorer.ts` | [新規] エクスプローラーロジック（右クリックメニュー・D&D・ポーリング更新）（Issue #16） |
+| `src/components/Explorer.tsx` | `useExplorer` フック利用に改修（レンダリング専用）（Issue #16） |

@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-04-08（見出し番号付与機能追加）
+> 最終更新: 2026-04-15（Issue #16: フォルダエクスプローラー仕様改善）
 
 ---
 
@@ -182,6 +182,15 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 - ファイルクリック → `onOpenFile` を呼び出し
 - `width` props で動的幅対応（App から渡す、`style={{ width }}` で適用）
 - `initialFolder` が変更されたとき `useEffect` で内部 rootPath を更新（D&D でフォルダをドロップした際に使用）
+- **右クリックコンテキストメニュー**（Issue #16）:
+  - ファイル右クリック → 「削除」
+  - フォルダ右クリック → 「新しいファイル」「新しいフォルダ」「削除」
+  - 背景右クリック → 「新しいファイル」「新しいフォルダ」（ルートに作成）
+  - `confirm()` ダイアログで削除前に確認
+- **インライン名前入力**（Issue #16）: ファイル/フォルダ作成時にツリー内に `<input>` を表示。`Enter` で確定、`Escape` / フォーカスアウトでキャンセル
+- **ドラッグ&ドロップ移動**（Issue #16）: HTML5 D&D API でエクスプローラー内のファイル/フォルダを別フォルダへ移動（`rename` API 使用）。ドロップ先フォルダに青ハイライト表示。自己配下へのドロップは無効
+- **リアルタイム更新**（Issue #16）: `setInterval`（2000ms）で `readDir` をポーリング。展開状態は `collectExpandedPaths` + `restoreExpanded` で保持。ファイル操作後は即時 `refreshTree()` で反映
+- ロジックは `useExplorer` カスタムフック（`src/hooks/useExplorer.ts`）に集約し、Explorer.tsx はレンダリングのみ担当
 
 ### TocSidebar
 
@@ -263,6 +272,31 @@ Editor の追加機能:
 ---
 
 ## hooks
+
+### useExplorer
+
+エクスプローラーの状態管理・ファイル操作ロジックを集約するカスタムフック（Issue #16 対応）。
+
+```ts
+export function useExplorer(
+  onOpenFile: (path: string) => void,
+  initialFolder?: string
+): UseExplorerReturn
+```
+
+主要な返り値:
+
+- `rootPath`, `tree` — ツリー表示用
+- `contextMenu`, `inlineInput`, `dragState`, `dropTargetPath` — UI 状態
+- `handleSelectFolder()` — フォルダ選択ダイアログ
+- `handleToggleNode(node)` — 展開/折り畳み・ファイルを開く
+- `handleContextMenu(e, node?)` — 右クリックメニューを開く
+- `handleContextMenuAction(action)` — メニュー操作（`"new-file"` / `"new-folder"` / `"delete"`）
+- `handleInlineChange(value)`, `handleInlineCommit()`, `handleInlineCancel()` — インライン入力
+- `handleDragStart/Over/Leave/End/Drop` — D&D ハンドラ
+
+ポーリング用 `setInterval`（2000ms）は `rootPath` が変わるたびに再登録される。  
+stale closure 対策として `treeRef: useRef<TreeNode[]>` で最新ツリーを保持する。
 
 ### useTabs
 
@@ -413,7 +447,8 @@ src/
 ├── hooks/
 │   ├── useTabs.ts           # 多タブ履歴管理フック
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）
-│   └── useEditorActions.ts  # テキスト操作ロジック
+│   ├── useEditorActions.ts  # テキスト操作ロジック
+│   └── useExplorer.ts       # エクスプローラー状態管理・ファイル操作ロジック（Issue #16）
 ├── utils/
 │   └── parseTable.ts        # CSV/TSV → Markdown テーブル変換ユーティリティ
 ├── styles/
