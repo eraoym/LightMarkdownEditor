@@ -40,8 +40,27 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
             el.setSelectionRange(Math.max(lineStart, start - 1), Math.max(lineStart, end - 1));
           });
         }
+      } else if (start !== end) {
+        // Tab（選択あり）: 選択範囲に含まれる全行の先頭にインデント挿入
+        const text = el.value;
+        const firstLineStart = text.lastIndexOf("\n", start - 1) + 1;
+        const selectedContent = text.slice(firstLineStart, end);
+        const lines = selectedContent.split("\n");
+        // 選択終端がちょうど行頭の場合、その行はインデントしない
+        const lastLineEmpty = lines[lines.length - 1] === "";
+        const linesToIndent = lastLineEmpty ? lines.slice(0, -1) : lines;
+        const indentedLines = linesToIndent.map((line) => indent + line);
+        const newSection = lastLineEmpty
+          ? [...indentedLines, ""].join("\n")
+          : indentedLines.join("\n");
+        const newValue = text.slice(0, firstLineStart) + newSection + text.slice(end);
+        onProgrammaticChange(newValue);
+        const addedChars = tabWidth * linesToIndent.length;
+        requestAnimationFrame(() => {
+          el.setSelectionRange(start + tabWidth, end + addedChars);
+        });
       } else {
-        // Tab: スペースを tabWidth 分挿入
+        // Tab（選択なし）: カーソル位置にインデント挿入
         const newValue = el.value.slice(0, start) + indent + el.value.slice(end);
         onProgrammaticChange(newValue);
         requestAnimationFrame(() => {

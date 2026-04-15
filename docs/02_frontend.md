@@ -230,7 +230,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 Editor の追加機能:
 
-- `Tab` → `tabWidth` 分のスペースを挿入（DOM の `el.value` を直接参照し React state との非同期ズレを回避）
+- `Tab` → 選択なし: カーソル位置に `tabWidth` 分のスペースを挿入。選択あり: 選択範囲に含まれる全行の先頭に `tabWidth` 分のスペースを挿入（DOM の `el.value` を直接参照し React state との非同期ズレを回避）
 - `Shift+Tab` → 行頭のスペースを `tabWidth` 分削除（同上）
 - `Ctrl+Shift+V` → クリップボードのタブ区切りテキスト（Excel コピー形式）を Markdown テーブルとして貼り付け
 - `Ctrl+Alt+V` → クリップボード内の画像をファイルとして貼り付け（テキストのみの場合は無効）。Ctrl+V での画像自動貼り付けは廃止（Issue #12 対応）
@@ -317,8 +317,8 @@ export function useEditorActions(
 | `Ctrl+Y` | リドゥ |
 | `Ctrl+Tab` | 次のタブへ切替 |
 | `Ctrl+Shift+Tab` | 前のタブへ切替 |
-| `Tab` | スペース2個挿入（Editor内） |
-| `Shift+Tab` | 行頭スペース2個削除（Editor内） |
+| `Tab` | 選択なし: スペースを tabWidth 分挿入。選択あり: 選択全行の先頭にスペースを tabWidth 分挿入（Editor内） |
+| `Shift+Tab` | 行頭スペースを tabWidth 分削除（Editor内） |
 | `Ctrl+Shift+V` | クリップボードのタブ区切りテキストを Markdown テーブルとして貼り付け |
 | `Ctrl+Alt+V` | クリップボード内の画像をファイルとして貼り付け |
 | `Ctrl+;` | 現在の日付を `YYYY/M/D` 形式でカーソル位置に挿入 |
