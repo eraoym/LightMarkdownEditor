@@ -84,8 +84,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 
 async function openFile(): Promise<{ path: string; content: string } | null> {
+  const explorerPath = localStorage.getItem("explorerPath");
   const path = await open({
     filters: [{ name: "Markdown", extensions: ["md", "txt"] }],
+    defaultPath: explorerPath ?? undefined, // 現在開いているフォルダをデフォルトに（Issue #18）
   });
   if (!path) return null; // キャンセル時
 
@@ -105,9 +107,10 @@ async function saveFile(filePath: string | null, content: string): Promise<strin
   let targetPath = filePath;
 
   if (!targetPath) {
+    const explorerPath = localStorage.getItem("explorerPath");
     targetPath = await save({
       filters: [{ name: "Markdown", extensions: ["md"] }],
-      defaultPath: "untitled.md",
+      defaultPath: explorerPath ? `${explorerPath}/untitled.md` : "untitled.md", // 現在開いているフォルダをデフォルトに（Issue #18）
     });
     if (!targetPath) return null; // キャンセル時
   }

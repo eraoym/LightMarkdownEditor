@@ -96,7 +96,7 @@ export default function Explorer({ onOpenFile, width, initialFolder }: ExplorerP
 
   /** フォルダ選択ダイアログを開き、選択されたフォルダをルートとしてツリーを構築する */
   const handleSelectFolder = async () => {
-    const selected = await open({ directory: true });
+    const selected = await open({ directory: true, defaultPath: rootPath ?? undefined });
     if (typeof selected !== "string") return;
     setRootPath(selected);
     localStorage.setItem("explorerPath", selected);

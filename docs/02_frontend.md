@@ -177,7 +177,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `width` | `number` | サイドバー幅（px） |
 | `initialFolder` | `string \| undefined` | 外部からフォルダを指定（D&D 等） |
 
-- フォルダ選択ボタン → `readDir` でツリー表示
+- フォルダ選択ボタン → `open({ directory: true, defaultPath: rootPath })` で選択ダイアログを表示（現在のフォルダをデフォルトに：Issue #18）。選択後 `readDir` でツリー表示
 - フォルダクリック → 遅延展開/折り畳み
 - ファイルクリック → `onOpenFile` を呼び出し
 - `width` props で動的幅対応（App から渡す、`style={{ width }}` で適用）

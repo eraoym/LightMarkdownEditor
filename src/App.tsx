@@ -210,8 +210,10 @@ export default function App() {
    * 既に同パスのタブが開いている場合はそのタブへ切り替える
    */
   const handleOpen = useCallback(async () => {
+    const explorerPath = localStorage.getItem("explorerPath");
     const selected = await open({
       filters: [{ name: "Markdown", extensions: ["md", "txt"] }],
+      defaultPath: explorerPath ?? undefined,
     });
     if (typeof selected !== "string") return;
     const existingId = tabsRef.current.findTabByPath(selected);
@@ -241,9 +243,10 @@ export default function App() {
     let targetPath = tabsRef.current.activeFilePath;
 
     if (!targetPath) {
+      const explorerPath = localStorage.getItem("explorerPath");
       const chosen = await save({
         filters: [{ name: "Markdown", extensions: ["md"] }],
-        defaultPath: "untitled.md",
+        defaultPath: explorerPath ? `${explorerPath}/untitled.md` : "untitled.md",
       });
       if (!chosen) {
         tabsRef.current.setActiveSaveState("unsaved");
