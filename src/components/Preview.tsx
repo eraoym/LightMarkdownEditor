@@ -31,21 +31,40 @@ interface PreviewProps {
 
 function MermaidDiagram({ code, isDark }: { code: string; isDark: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  // IDはマウント時に1度だけ確定させる（再レンダリングごとに新IDを生成しない）
+  const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
+    if (!ref.current) return;
+
+    // 前回の描画結果をクリア（エラーメッセージ・SVGの累積を防ぐ）
+    ref.current.innerHTML = "";
+
+    // アンマウント後の非同期コールバック実行を防ぐフラグ
+    let cancelled = false;
+
     mermaid.initialize({ startOnLoad: false, theme: isDark ? "dark" : "default" });
-    const id = `mermaid-${Math.random().toString(36).slice(2)}`;
-    mermaid.render(id, code).then(({ svg }) => {
-      if (ref.current) {
+
+    mermaid
+      .render(idRef.current, code)
+      .then(({ svg }) => {
+        if (cancelled || !ref.current) return;
         ref.current.innerHTML = svg;
         // mermaid が SVG に付与するインライン background スタイルを除去し
         // ページの背景色に合わせる（ライト/ダーク共通）
         const svgEl = ref.current.querySelector("svg");
         if (svgEl) svgEl.style.background = "transparent";
-      }
-    }).catch(() => {
-      if (ref.current) ref.current.textContent = "mermaid 描画エラー";
-    });
+      })
+      .catch(() => {
+        if (cancelled || !ref.current) return;
+        // エラー時も前回SVGをクリアしてからメッセージを設定
+        ref.current.innerHTML = "";
+        ref.current.textContent = "mermaid 描画エラー";
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [code, isDark]);
 
   return <div ref={ref} className="mermaid-diagram" />;

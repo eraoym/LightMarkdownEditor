@@ -254,6 +254,7 @@ Editor の追加機能:
 - `@page` の `margin: 0 0 1.2cm` + `@bottom-center { content: counter(page) }` でページ番号を中央下部に表示（WebView2の"localhost:1420"フッタを置換）
 - `.print-area hr` に `break-after: page` を指定することで、Markdown の `---` を改ページとして扱える
 - `MermaidDiagram` に `mermaid-diagram` クラスを付与し、SVG 背景を透明に上書きすることでライトモードの背景色問題を修正
+- `MermaidDiagram` の `useEffect` は `code`/`isDark` 変化時に前回描画をクリアしてから再描画し、アンマウント時にもキャンセル処理を行う（Issue #19 対応）
 - `previewTheme` に対応する CSS を `src/styles/themes/` から `?raw` インポートし、`<style>` タグとして注入することでテーマを切替。CSS 変数（`--tw-prose-*` / `--tw-prose-invert-*`）でライト/ダーク両対応
 - 文書先頭の YAML front matter（`---` ... `---` で囲まれたブロック）はプレビュー・目次の対象外とする（Issue #14 対応）
 - `rehype-raw` プラグインにより Markdown 内の HTML タグをそのままレンダリング（Issue #15 対応）
