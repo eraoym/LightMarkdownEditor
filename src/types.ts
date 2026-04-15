@@ -1,6 +1,7 @@
 export type SaveState = "saved" | "unsaved" | "saving";
 export type Mode = "edit" | "preview";
 export type PreviewTheme = "github" | "minimal" | "academic";
+export type FileType = "text" | "pdf" | "unsupported";
 
 export interface AppSettings {
   editorFontSize: number;
@@ -28,6 +29,8 @@ export interface TabData {
   content: string;
   /** 保存状態 */
   saveState: SaveState;
+  /** ファイル種別 */
+  fileType: FileType;
   /** アンドゥ/リドゥ用の履歴スタック */
   historyStack: string[];
   /** 履歴スタック内の現在位置 */

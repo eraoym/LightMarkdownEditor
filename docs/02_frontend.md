@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-04-15（Issue #16: フォルダエクスプローラー仕様改善）
+> 最終更新: 2026-04-15（Issue #17: PDF 表示機能追加）
 
 ---
 
@@ -69,6 +69,7 @@ App
 │           ├── Preview     ← react-markdown + hljs（EditMode スプリット時 or PreviewMode 時）
 │           ├── [divider]   ← リサイズハンドル（TOC 表示時）
 │           └── TocSidebar  ← 目次サイドバー（PreviewMode + TOC ON 時）
+│   └── PdfViewer       ← PDF 参照専用ビューア（activeFileType === "pdf" 時）
 └── SettingsModal   ← 設定モーダル（isSettingsOpen 時）
 ```
 
@@ -139,6 +140,7 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `onSettingsOpen` | `() => void` | 設定モーダルを開くハンドラ |
 | `onPrint` | `() => void` | PDF 印刷ハンドラ（PreviewMode 時に PDF ボタン表示） |
 | `version` | `string` | アプリバージョン文字列（`getVersion()` で取得、⚙ボタン左に `vX.Y.Z` 表示） |
+| `isPdf` | `boolean` | アクティブタブが PDF ファイルの場合 `true`。モード切替（編集/プレビュー）・Split・TOC・印刷ボタンを無効化 |
 
 ### SettingsModal
 
@@ -204,6 +206,20 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 - `/^(#{1,6})\s+(.+)$/gm` で H1〜H6 を抽出
 - 見出しレベルに応じて `paddingLeft: (level-1) * 12px` でインデント表示
 - PreviewMode + `isTocOpen` の時のみ表示
+
+### PdfViewer
+
+| Props | 型 | 説明 |
+| --- | --- | --- |
+| `filePath` | `string` | 表示する PDF ファイルの絶対パス |
+
+- `readFile`（`@tauri-apps/plugin-fs`）でバイナリ読み込み → `Blob` + `URL.createObjectURL` で Blob URL を生成
+- `<iframe>` に渡して WebView2 のネイティブ PDF レンダリングを利用（新規 npm パッケージなし）
+- タブ切替・コンポーネントアンマウント時に `URL.revokeObjectURL` で Blob URL を解放（メモリリーク防止）
+- 読み込み中は「読み込み中...」、エラー時は「PDF を読み込めませんでした」を表示
+- `activeFileType === "pdf"` の時のみ表示。Editor / Preview / Toolbar は非表示になる
+- Ctrl+S は PDF タブでは無効（`handleSave` 冒頭で `activeFileType === "pdf"` をガード）
+- ヘッダーのモード切替・Split・TOC・印刷ボタンは `isPdf` フラグで無効化
 
 ### Toolbar
 
@@ -309,10 +325,10 @@ export function useTabs(): UseTabsReturn
 
 主要な返り値:
 
-- `tabs`, `activeId`, `activeContent`, `activeFilePath`, `activeSaveState` — 描画用
+- `tabs`, `activeId`, `activeContent`, `activeFilePath`, `activeSaveState`, `activeFileType` — 描画用
 - `newTab()`, `closeTab(id)`, `switchTab(id)`, `nextTab()`, `prevTab()` — タブ操作
 - `findTabByPath(path)` — 同一ファイルの重複チェック
-- `openFileInTab(path, content, targetId?)` — ファイルを特定タブに開く
+- `openFileInTab(path, content, targetId?, fileType?)` — ファイルを特定タブに開く（`fileType` は `"text"` / `"pdf"` / `"unsupported"`）
 - `setActiveContent(v)` — 500ms デバウンスでコミット（タイピング用）
 - `setActiveContentImmediate(v)` — 即時コミット（ツールバー/Tab補完用）
 - `undo()`, `redo()` — タブごとに独立した履歴
@@ -433,7 +449,7 @@ export function useEditorActions(
 
 ```text
 src/
-├── types.ts              # 共通型: TabData, SaveState, Mode, PreviewTheme, AppSettings, DEFAULT_SETTINGS
+├── types.ts              # 共通型: TabData, SaveState, Mode, PreviewTheme, FileType, AppSettings, DEFAULT_SETTINGS
 ├── App.tsx               # 状態管理・キーボードショートカット・Tauri 呼び出し
 ├── components/
 │   ├── Header.tsx        # ☰ / Split / TOC / ⚙ トグルボタン
@@ -443,7 +459,8 @@ src/
 │   ├── Toolbar.tsx       # フォーマットツールバー
 │   ├── Preview.tsx       # highlight.js によるシンタックスハイライト統合
 │   ├── SettingsModal.tsx # 設定モーダル（フォントサイズ・フォント・タブ幅）
-│   └── TocSidebar.tsx    # 目次サイドバー（PreviewMode 用）
+│   ├── TocSidebar.tsx    # 目次サイドバー（PreviewMode 用）
+│   └── PdfViewer.tsx     # PDF 参照専用ビューア（Issue #17）
 ├── hooks/
 │   ├── useTabs.ts           # 多タブ履歴管理フック
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）

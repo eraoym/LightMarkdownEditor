@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { TabData, SaveState } from "../types";
+import type { TabData, SaveState, FileType } from "../types";
 
 /** 履歴スタックの最大保持件数 */
 const MAX_HISTORY = 200;
@@ -20,6 +20,7 @@ function createEmptyTab(): TabData {
     filePath: null,
     content: "",
     saveState: "saved",
+    fileType: "text",
     historyStack: [""],
     historyCursor: 0,
     historyPending: null,
@@ -64,6 +65,7 @@ export interface UseTabsReturn {
   activeContent: string;
   activeFilePath: string | null;
   activeSaveState: SaveState;
+  activeFileType: FileType;
 
   newTab: () => string;
   closeTab: (id: string) => void;
@@ -73,7 +75,7 @@ export interface UseTabsReturn {
   nextTab: () => void;
   prevTab: () => void;
   findTabByPath: (p: string) => string | undefined;
-  openFileInTab: (path: string, content: string, targetId?: string) => void;
+  openFileInTab: (path: string, content: string, targetId?: string, fileType?: FileType) => void;
   pruneEmptyTabs: () => void;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
 
@@ -245,7 +247,7 @@ export function useTabs(): UseTabsReturn {
    * @param targetId - ロード先タブのID（省略時はアクティブタブ）
    */
   const openFileInTab = useCallback(
-    (path: string, content: string, targetId?: string) => {
+    (path: string, content: string, targetId?: string, fileType: FileType = "text") => {
       const tabs = tabsDataRef.current;
       const id = targetId ?? activeIdRef.current;
       const tab = tabs.find((t) => t.id === id);
@@ -255,6 +257,7 @@ export function useTabs(): UseTabsReturn {
       tab.filePath = path;
       tab.content = content;
       tab.saveState = "saved";
+      tab.fileType = fileType;
       tab.historyStack = [content];
       tab.historyCursor = 0;
       tab.historyPending = null;
@@ -384,6 +387,7 @@ export function useTabs(): UseTabsReturn {
     activeContent: active?.content ?? "",
     activeFilePath: active?.filePath ?? null,
     activeSaveState: active?.saveState ?? "saved",
+    activeFileType: active?.fileType ?? "text",
     newTab,
     closeTab,
     closeOtherTabs,

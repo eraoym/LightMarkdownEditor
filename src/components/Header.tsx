@@ -17,6 +17,7 @@ interface HeaderProps {
   onSettingsOpen: () => void;
   onPrint: () => void;
   version: string;
+  isPdf: boolean;
 }
 
 export default function Header({
@@ -36,6 +37,7 @@ export default function Header({
   onSettingsOpen,
   onPrint,
   version,
+  isPdf,
 }: HeaderProps) {
   const fileName = filePath
     ? (filePath.split(/[\\/]/).pop() ?? filePath)
@@ -67,19 +69,29 @@ export default function Header({
       <span className="text-xs text-zinc-400">{saveLabel}</span>
       <div className="flex border border-zinc-300 dark:border-zinc-600 rounded overflow-hidden text-sm">
         <button
-          onClick={() => onModeChange("edit")}
-          className={mode === "edit" ? "bg-zinc-200 dark:bg-zinc-700 px-3 py-1" : "px-3 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"}
+          onClick={() => !isPdf && onModeChange("edit")}
+          disabled={isPdf}
+          className={[
+            "px-3 py-1",
+            isPdf ? "opacity-40 cursor-not-allowed" : "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+            mode === "edit" && !isPdf ? "bg-zinc-200 dark:bg-zinc-700" : "",
+          ].join(" ")}
         >
           編集
         </button>
         <button
-          onClick={() => onModeChange("preview")}
-          className={mode === "preview" ? "bg-zinc-200 dark:bg-zinc-700 px-3 py-1" : "px-3 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"}
+          onClick={() => !isPdf && onModeChange("preview")}
+          disabled={isPdf}
+          className={[
+            "px-3 py-1",
+            isPdf ? "opacity-40 cursor-not-allowed" : "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+            mode === "preview" && !isPdf ? "bg-zinc-200 dark:bg-zinc-700" : "",
+          ].join(" ")}
         >
           プレビュー
         </button>
       </div>
-      {mode === "edit" && (
+      {mode === "edit" && !isPdf && (
         <button
           onClick={onSplitPreviewToggle}
           title="スプリットプレビューを切替"
@@ -88,7 +100,7 @@ export default function Header({
           Split
         </button>
       )}
-      {mode === "preview" && (
+      {mode === "preview" && !isPdf && (
         <button
           onClick={onTocToggle}
           title="目次サイドバーを切替"
@@ -97,7 +109,7 @@ export default function Header({
           TOC
         </button>
       )}
-      {mode === "preview" && (
+      {mode === "preview" && !isPdf && (
         <button
           onClick={onPrint}
           title="PDFとして印刷"

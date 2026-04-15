@@ -12,9 +12,10 @@ import TabBar from "./components/TabBar";
 import Explorer from "./components/Explorer";
 import TocSidebar from "./components/TocSidebar";
 import SettingsModal from "./components/SettingsModal";
+import PdfViewer from "./components/PdfViewer";
 import { useEditorActions } from "./hooks/useEditorActions";
 import { useTabs } from "./hooks/useTabs";
-import type { Mode, AppSettings } from "./types";
+import type { Mode, AppSettings, FileType } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
 
 /** テキストとして読み込める拡張子のセット。対象外はプレビュー不可メッセージを表示する */
@@ -23,6 +24,9 @@ const TEXT_EXTENSIONS = new Set([
   "ts", "tsx", "js", "jsx", "html", "css", "xml", "log",
   "ini", "conf", "sh", "bat",
 ]);
+
+/** PDF として表示できる拡張子のセット */
+const PDF_EXTENSIONS = new Set(["pdf"]);
 
 export default function App() {
   const tabs = useTabs();
@@ -119,12 +123,17 @@ export default function App() {
         try {
           const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
           const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
-          const content = TEXT_EXTENSIONS.has(ext)
+          const fileType: FileType = PDF_EXTENSIONS.has(ext) ? "pdf"
+            : TEXT_EXTENSIONS.has(ext) ? "text"
+            : "unsupported";
+          const content = fileType === "text"
             ? await readTextFile(filePath)
+            : fileType === "pdf"
+            ? ""
             : `> このファイルは表示できません: \`${fileName}\``;
           restoredPaths.push(filePath);
           const newId = tabsRef.current.newTab();
-          tabsRef.current.openFileInTab(filePath, content, newId);
+          tabsRef.current.openFileInTab(filePath, content, newId, fileType);
           if (filePath === savedActive) targetId = newId;
         } catch {
           // ファイルが移動・削除されていればスキップ
@@ -212,7 +221,10 @@ export default function App() {
   const handleOpen = useCallback(async () => {
     const explorerPath = localStorage.getItem("explorerPath");
     const selected = await open({
-      filters: [{ name: "Markdown", extensions: ["md", "txt"] }],
+      filters: [
+        { name: "Markdown / Text", extensions: ["md", "txt"] },
+        { name: "PDF", extensions: ["pdf"] },
+      ],
       defaultPath: explorerPath ?? undefined,
     });
     if (typeof selected !== "string") return;
@@ -221,16 +233,17 @@ export default function App() {
       tabsRef.current.switchTab(existingId);
       return;
     }
-    const content = await readTextFile(selected);
+    const ext = selected.split(".").pop()?.toLowerCase() ?? "";
+    const fileType: FileType = PDF_EXTENSIONS.has(ext) ? "pdf" : "text";
+    const content = fileType === "pdf" ? "" : await readTextFile(selected);
     const active = tabsRef.current.tabs.find(
       (t) => t.id === tabsRef.current.activeId
     )!;
     if (active.filePath === null && active.content === "") {
-      tabsRef.current.openFileInTab(selected, content, active.id);
+      tabsRef.current.openFileInTab(selected, content, active.id, fileType);
     } else {
       tabsRef.current.newTab();
-      // openFileInTab は新しいタブ（末尾）をターゲットにする
-      tabsRef.current.openFileInTab(selected, content);
+      tabsRef.current.openFileInTab(selected, content, undefined, fileType);
     }
   }, []);
 
@@ -239,6 +252,7 @@ export default function App() {
    * ファイルパスが未設定の場合は「名前を付けて保存」ダイアログを表示する
    */
   const handleSave = useCallback(async () => {
+    if (tabsRef.current.activeFileType === "pdf") return;
     tabsRef.current.setActiveSaveState("saving");
     let targetPath = tabsRef.current.activeFilePath;
 
@@ -378,8 +392,13 @@ export default function App() {
 
     const ext = path.split(".").pop()?.toLowerCase() ?? "";
     const fileName = path.split(/[\\/]/).pop() ?? path;
-    const content = TEXT_EXTENSIONS.has(ext)
+    const fileType: FileType = PDF_EXTENSIONS.has(ext) ? "pdf"
+      : TEXT_EXTENSIONS.has(ext) ? "text"
+      : "unsupported";
+    const content = fileType === "text"
       ? await readTextFile(path)
+      : fileType === "pdf"
+      ? ""
       : `> このファイルは表示できません: \`${fileName}\``;
 
     // await 後に再チェック（並走による二重オープン防止）
@@ -393,10 +412,10 @@ export default function App() {
       (t) => t.id === tabsRef.current.activeId
     )!;
     if (active.filePath === null && active.content === "") {
-      tabsRef.current.openFileInTab(path, content, active.id);
+      tabsRef.current.openFileInTab(path, content, active.id, fileType);
     } else {
       tabsRef.current.newTab();
-      tabsRef.current.openFileInTab(path, content);
+      tabsRef.current.openFileInTab(path, content, undefined, fileType);
     }
   }, []);
 
@@ -486,6 +505,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleSave]);
 
+  const isPdf = tabs.activeFileType === "pdf";
+
   return (
     <div
       className={`relative flex flex-col h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 ${isDark ? "dark" : ""}`}
@@ -515,6 +536,7 @@ export default function App() {
         onSettingsOpen={() => setIsSettingsOpen(true)}
         onPrint={() => window.print()}
         version={appVersion}
+        isPdf={isPdf}
       />
       <TabBar
         tabs={tabs.tabs}
@@ -551,9 +573,14 @@ export default function App() {
           </>
         )}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {mode === "edit" && <Toolbar actions={editorActions} />}
+          {mode === "edit" && !isPdf && <Toolbar actions={editorActions} />}
           <div className="flex flex-1 overflow-hidden">
-            {mode === "edit" && (
+            {/* PDF タブ: PdfViewer をフル表示 */}
+            {isPdf && tabs.activeFilePath && (
+              <PdfViewer filePath={tabs.activeFilePath} />
+            )}
+            {/* テキストタブ: 既存の Editor / Split / Preview */}
+            {!isPdf && mode === "edit" && (
               <Editor
                 ref={textareaRef}
                 value={tabs.activeContent}
@@ -566,7 +593,7 @@ export default function App() {
                 tabWidth={settings.tabWidth}
               />
             )}
-            {mode === "edit" && isSplitPreview && (
+            {!isPdf && mode === "edit" && isSplitPreview && (
               <>
                 <div
                   className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-400 active:bg-blue-500"
@@ -598,7 +625,7 @@ export default function App() {
                 </div>
               </>
             )}
-            {mode === "preview" && (
+            {!isPdf && mode === "preview" && (
               <Preview
                 markdown={tabs.activeContent}
                 filePath={tabs.activeFilePath}
@@ -607,7 +634,7 @@ export default function App() {
                 onCheckboxToggle={handleCheckboxToggle}
               />
             )}
-            {mode === "preview" && isTocOpen && (
+            {!isPdf && mode === "preview" && isTocOpen && (
               <>
                 <div
                   className="w-1 shrink-0 cursor-col-resize bg-zinc-200 dark:bg-zinc-700 hover:bg-blue-400 active:bg-blue-500"
