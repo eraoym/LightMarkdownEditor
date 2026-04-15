@@ -21,6 +21,55 @@ const Editor = forwardRef<HTMLTextAreaElement, EditorProps>(function Editor(
     const start = el.selectionStart;
     const end = el.selectionEnd;
 
+    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      const text = el.value;
+      const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      const lineEnd = text.indexOf("\n", start);
+      const lineEndPos = lineEnd === -1 ? text.length : lineEnd;
+      const currentLine = text.slice(lineStart, lineEndPos);
+
+      // ケース1: リスト行（先頭の空白 + [- or *] + 半角スペース + 本文）
+      const listMatch = currentLine.match(/^(\s*)([-*]) (.*)/);
+      if (listMatch) {
+        const [, indent, marker, content] = listMatch;
+        e.preventDefault();
+        if (content.trim() === "") {
+          // 空リスト項目: マーカーを削除して通常改行に戻す
+          const markerStart = lineStart + indent.length;
+          const afterLine = lineEnd === -1 ? "" : text.slice(lineEnd);
+          const newValue = text.slice(0, markerStart) + afterLine;
+          onProgrammaticChange(newValue);
+          requestAnimationFrame(() => {
+            el.setSelectionRange(markerStart, markerStart);
+          });
+        } else {
+          // 非空リスト項目: 次の行に同じプレフィックスを挿入
+          const prefix = "\n" + indent + marker + " ";
+          const newValue = text.slice(0, start) + prefix + text.slice(end);
+          onProgrammaticChange(newValue);
+          const newPos = start + prefix.length;
+          requestAnimationFrame(() => {
+            el.setSelectionRange(newPos, newPos);
+          });
+        }
+        return;
+      }
+
+      // ケース2: インデントのみの行（リストマーカーなし）
+      const indentMatch = currentLine.match(/^(\s+)/);
+      if (indentMatch) {
+        e.preventDefault();
+        const preserved = indentMatch[1];
+        const newValue = text.slice(0, start) + "\n" + preserved + text.slice(end);
+        onProgrammaticChange(newValue);
+        const newPos = start + 1 + preserved.length;
+        requestAnimationFrame(() => {
+          el.setSelectionRange(newPos, newPos);
+        });
+        return;
+      }
+    }
+
     if (e.key === "Tab" && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
       const indent = " ".repeat(tabWidth);
