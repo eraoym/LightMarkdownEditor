@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-04-15（Issue #17: PDF 表示機能追加）
+> 最終更新: 2026-04-16（Issue #20: 検索・置換・正規表現検索機能追加）
 
 ---
 
@@ -242,6 +242,38 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | テーブル | `⊞` | 未選択: 2×2テンプレート挿入 / 選択時: カンマ区切りテキストを表に変換 |
 | 見出し番号付与 | `№` | 全見出しに階層番号（`1.1.1` 形式）を付与/再付与（既存番号は除去して再付与） |
 
+### SearchBar（Issue #20）
+
+検索・置換フローティングパネル。エディタエリアの右上に `absolute` 配置。
+
+| Props | 型 | 説明 |
+| --- | --- | --- |
+| `state` | `SearchState` | 検索パネルの状態 |
+| `onChange` | `(partial: Partial<SearchState>) => void` | 状態の部分更新コールバック |
+| `onNext` | `() => void` | 次のマッチへ移動 |
+| `onPrev` | `() => void` | 前のマッチへ移動 |
+| `onReplace` | `() => void` | 現在マッチを置換して次へ |
+| `onReplaceAll` | `() => void` | 全マッチを一括置換 |
+| `onClose` | `() => void` | 検索パネルを閉じる |
+| `matchCount` | `number` | マッチ総数 |
+| `regexError` | `string \| null` | 正規表現パースエラーメッセージ |
+| `inputRef` | `RefObject<HTMLInputElement>` | 検索入力へのref（外部フォーカス用） |
+
+UIレイアウト:
+```
+┌──────────────────────────────────────────────────────────┐
+│ [▶/▼] [検索ボックス──────────────] [.*] [3/12] [∧][∨][✕] │
+│       [置換ボックス──────────────────] [置換] [全置換]     │ ← showReplace 時のみ
+│       [! 正規表現エラーメッセージ]                        │
+└──────────────────────────────────────────────────────────┘
+```
+
+- `[▶/▼]`: 置換エリア展開/折りたたみトグル
+- `[.*]`: 正規表現モード切り替え（アクティブ時は青背景）
+- `[3/12]`: `{currentMatchIndex + 1} / {matchCount}` 表示
+- `[∧][∨]`: 前/次マッチナビゲーション
+- `Enter` / `Shift+Enter` で次/前マッチへ移動、`Escape` で閉じる
+
 ### Editor
 
 | Props | 型 | 説明 |
@@ -252,6 +284,18 @@ const textareaRef = useRef<HTMLTextAreaElement>(null);
 | `fontSize` | `number \| undefined` | エディタフォントサイズ（px） |
 | `fontFamily` | `string \| undefined` | エディタフォントファミリー |
 | `tabWidth` | `2 \| 4` | タブ幅（スペース数、デフォルト 2） |
+| `searchState` | `SearchState \| undefined` | 検索パネルの状態（Issue #20） |
+| `searchMatches` | `SearchMatch[]` | マッチ位置リスト（Issue #20） |
+| `onSearch*` | 各種コールバック | 検索操作コールバック群（Issue #20） |
+
+**検索ハイライト（Backdrop Overlay 技術）**
+
+検索アクティブ時、`<textarea>` の背後に同一スタイルの `<div>` を重ね、`<mark>` タグでマッチ位置を背景色ハイライト。
+
+- overlay div: `bg-white dark:bg-zinc-900`, `color: transparent`, `pointer-events: none`
+- 現在マッチ: `bg-orange-400/70`、他マッチ: `bg-yellow-300/50`
+- textarea は `bg-transparent` に変更（overlay の背景色が透けて見える）
+- `onScroll` で overlay の `scrollTop/scrollLeft` を textarea に同期
 
 Editor の追加機能:
 
@@ -335,6 +379,20 @@ export function useTabs(): UseTabsReturn
 
 各タブは独立した履歴スタックを持つ（最大 200 エントリ）。
 
+### useSearch（Issue #20）
+
+```ts
+export function useSearch(
+  content: string,
+  state: SearchState,
+): { matches: SearchMatch[]; regexError: string | null }
+```
+
+- `useMemo` でマッチリストを計算（`content`, `query`, `useRegex` 変化時のみ再計算）
+- 通常検索: `toLowerCase()` で大文字小文字を区別しない `indexOf` ループ
+- 正規表現検索: `new RegExp(query, "gi")`、`try/catch` でエラーを `regexError` として返す
+- 空マッチによる無限ループ防止: `re.lastIndex++`
+
 ### useEditorActions
 
 ```ts
@@ -375,6 +433,10 @@ export function useEditorActions(
 | `Ctrl+Alt+V` | クリップボード内の画像をファイルとして貼り付け |
 | `Ctrl+;` | 現在の日付を `YYYY/M/D` 形式でカーソル位置に挿入 |
 | `Ctrl+:` | 現在の時刻を `hh:mm` 形式でカーソル位置に挿入 |
+| `Ctrl+F` | 検索パネルを開く（置換エリアは非表示で開始） |
+| `Enter`（検索入力中） | 次のマッチへ移動 |
+| `Shift+Enter`（検索入力中） | 前のマッチへ移動 |
+| `Escape`（検索パネル表示中） | 検索パネルを閉じる |
 
 ---
 
@@ -449,13 +511,14 @@ export function useEditorActions(
 
 ```text
 src/
-├── types.ts              # 共通型: TabData, SaveState, Mode, PreviewTheme, FileType, AppSettings, DEFAULT_SETTINGS
+├── types.ts              # 共通型: TabData, SaveState, Mode, PreviewTheme, FileType, AppSettings, SearchState, SearchMatch, DEFAULT_SETTINGS, DEFAULT_SEARCH_STATE
 ├── App.tsx               # 状態管理・キーボードショートカット・Tauri 呼び出し
 ├── components/
 │   ├── Header.tsx        # ☰ / Split / TOC / ⚙ トグルボタン
 │   ├── TabBar.tsx        # タブバー UI
 │   ├── Explorer.tsx      # エクスプローラーサイドバー
-│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（fontSize/fontFamily/tabWidth props 対応）
+│   ├── Editor.tsx        # forwardRef・Tab/括弧補完（fontSize/fontFamily/tabWidth props 対応）・検索ハイライト overlay（Issue #20）
+│   ├── SearchBar.tsx     # 検索・置換フローティングパネル（Issue #20）
 │   ├── Toolbar.tsx       # フォーマットツールバー
 │   ├── Preview.tsx       # highlight.js によるシンタックスハイライト統合
 │   ├── SettingsModal.tsx # 設定モーダル（フォントサイズ・フォント・タブ幅）
@@ -465,6 +528,7 @@ src/
 │   ├── useTabs.ts           # 多タブ履歴管理フック
 │   ├── useHistory.ts        # 旧履歴管理（未使用、削除保留）
 │   ├── useEditorActions.ts  # テキスト操作ロジック
+│   ├── useSearch.ts         # 検索マッチ計算フック（Issue #20）
 │   └── useExplorer.ts       # エクスプローラー状態管理・ファイル操作ロジック（Issue #16）
 ├── utils/
 │   └── parseTable.ts        # CSV/TSV → Markdown テーブル変換ユーティリティ

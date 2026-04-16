@@ -19,6 +19,35 @@ export const DEFAULT_SETTINGS: AppSettings = {
   headingNumberStart: 1,
 };
 
+/** 検索・置換パネルの状態 */
+export interface SearchState {
+  isOpen: boolean;
+  query: string;
+  replaceText: string;
+  useRegex: boolean;
+  /** 置換エリアの表示フラグ（起動時は false） */
+  showReplace: boolean;
+  /** 現在フォーカス中のマッチインデックス（0-indexed） */
+  currentMatchIndex: number;
+}
+
+export const DEFAULT_SEARCH_STATE: SearchState = {
+  isOpen: false,
+  query: "",
+  replaceText: "",
+  useRegex: false,
+  showReplace: false,
+  currentMatchIndex: 0,
+};
+
+/** 1件のマッチ情報 */
+export interface SearchMatch {
+  start: number;
+  end: number;
+  /** 正規表現キャプチャグループ。[0]=マッチ全体、[1]=第1グループ… */
+  groups?: string[];
+}
+
 /** 1タブ分の状態データ */
 export interface TabData {
   /** タブの一意識別子 */

@@ -13,6 +13,11 @@
   scrollbar-color: #52525b #27272a;
 }
 
+/* 検索マッチのネイティブ選択ハイライトをオレンジ系に */
+textarea::selection {
+  background-color: rgba(234, 88, 12, 0.35);
+}
+
 /* Mermaid: pre コンテナは透過にして SVG コンテンツだけ表示 */
 .prose pre:has(.mermaid-diagram) {
   background: transparent !important;

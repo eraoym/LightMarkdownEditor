@@ -16,8 +16,9 @@ import SettingsModal from "./components/SettingsModal";
 import PdfViewer from "./components/PdfViewer";
 import { useEditorActions } from "./hooks/useEditorActions";
 import { useTabs } from "./hooks/useTabs";
-import type { Mode, AppSettings, FileType } from "./types";
-import { DEFAULT_SETTINGS } from "./types";
+import type { Mode, AppSettings, FileType, SearchState } from "./types";
+import { DEFAULT_SETTINGS, DEFAULT_SEARCH_STATE } from "./types";
+import { useSearch } from "./hooks/useSearch";
 
 /** テキストとして読み込める拡張子のセット。対象外はプレビュー不可メッセージを表示する */
 const TEXT_EXTENSIONS = new Set([
@@ -69,6 +70,10 @@ export default function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const isSyncingScroll = useRef(false);
+
+  const [searchState, setSearchState] = useState<SearchState>(DEFAULT_SEARCH_STATE);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { matches: searchMatches, regexError: searchRegexError } = useSearch(tabs.activeContent, searchState);
 
   const editorActions = useEditorActions(
     textareaRef,
@@ -475,6 +480,99 @@ export default function App() {
     return () => { unlisten?.(); };
   }, [handleOpenFileFromExplorer]);
 
+  // 検索操作コールバック群
+  const handleSearchChange = useCallback((partial: Partial<SearchState>) => {
+    setSearchState((prev) => {
+      const next = { ...prev, ...partial };
+      if ("query" in partial || "useRegex" in partial) {
+        next.currentMatchIndex = 0;
+      }
+      return next;
+    });
+  }, []);
+
+  // マッチへフォーカス・選択・スクロールを直接実行するヘルパー
+  // useEffect 経由にするとタイプ中にもフォーカスを奪うため、ナビゲーション時のみ呼ぶ
+  const focusMatch = useCallback((index: number, matches: typeof searchMatches) => {
+    const el = textareaRef.current;
+    if (!el || matches.length === 0) return;
+    const match = matches[index];
+    if (!match) return;
+    el.focus();
+    el.setSelectionRange(match.start, match.end);
+    const linesBefore = (tabs.activeContent.slice(0, match.start).match(/\n/g) ?? []).length;
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+    el.scrollTop = Math.max(0, linesBefore * lineHeight - el.clientHeight / 2);
+  }, [tabs.activeContent]);
+
+  const handleSearchNext = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const newIndex = (searchState.currentMatchIndex + 1) % searchMatches.length;
+    setSearchState((prev) => ({ ...prev, currentMatchIndex: newIndex }));
+    focusMatch(newIndex, searchMatches);
+  }, [searchMatches, searchState.currentMatchIndex, focusMatch]);
+
+  const handleSearchPrev = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const newIndex = (searchState.currentMatchIndex - 1 + searchMatches.length) % searchMatches.length;
+    setSearchState((prev) => ({ ...prev, currentMatchIndex: newIndex }));
+    focusMatch(newIndex, searchMatches);
+  }, [searchMatches, searchState.currentMatchIndex, focusMatch]);
+
+  const handleSearchReplace = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    setSearchState((prev) => {
+      const match = searchMatches[prev.currentMatchIndex];
+      if (!match) return prev;
+      const content = tabsRef.current.activeContent;
+      // 正規表現モードかつグループがある場合は $1,$2... を展開
+      const replacement = prev.useRegex && match.groups
+        ? prev.replaceText.replace(/\$(\d+)/g, (_, n) => match.groups![parseInt(n)] ?? "")
+        : prev.replaceText;
+      const newContent = content.slice(0, match.start) + replacement + content.slice(match.end);
+      tabsRef.current.setActiveContentImmediate(newContent);
+      return {
+        ...prev,
+        currentMatchIndex: Math.max(0, Math.min(prev.currentMatchIndex, searchMatches.length - 2)),
+      };
+    });
+  }, [searchMatches]);
+
+  const handleSearchReplaceAll = useCallback(() => {
+    if (searchMatches.length === 0) return;
+    const content = tabsRef.current.activeContent;
+    let newContent: string;
+    if (searchState.useRegex) {
+      // 正規表現モード: String.replace() が $1,$2... をネイティブに処理
+      try {
+        const re = new RegExp(searchState.query, "gi");
+        newContent = content.replace(re, searchState.replaceText);
+      } catch {
+        return;
+      }
+    } else {
+      // 通常モード: 末尾から逐次置換（インデックスずれ防止）
+      newContent = content;
+      for (let i = searchMatches.length - 1; i >= 0; i--) {
+        const { start, end } = searchMatches[i];
+        newContent = newContent.slice(0, start) + searchState.replaceText + newContent.slice(end);
+      }
+    }
+    tabsRef.current.setActiveContentImmediate(newContent);
+    setSearchState((prev) => ({ ...prev, currentMatchIndex: 0 }));
+  }, [searchMatches, searchState.useRegex, searchState.query, searchState.replaceText]);
+
+  const handleSearchClose = useCallback(() => {
+    setSearchState((prev) => ({ ...prev, isOpen: false, currentMatchIndex: 0 }));
+    textareaRef.current?.focus();
+  }, []);
+
+  // タブ切替時にマッチインデックスをリセット
+  useEffect(() => {
+    setSearchState((prev) => ({ ...prev, currentMatchIndex: 0 }));
+  }, [tabs.activeId]);
+
+
   // グローバルキーボードショートカットを登録する（Ctrl/Cmd + キー）
   useEffect(() => {
     /** 保存・書式・履歴・タブ切替・日時挿入などのショートカットを処理する */
@@ -513,6 +611,18 @@ export default function App() {
         editorActionsRef.current.insertAtCursor(
           `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
         );
+      } else if (e.key === "f") {
+        e.preventDefault();
+        setSearchState((prev) => ({
+          ...prev,
+          isOpen: true,
+          showReplace: false,
+          currentMatchIndex: 0,
+        }));
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -605,6 +715,16 @@ export default function App() {
                 fontSize={settings.editorFontSize}
                 fontFamily={settings.editorFontFamily}
                 tabWidth={settings.tabWidth}
+                searchState={searchState}
+                matchCount={searchMatches.length}
+                onSearchChange={handleSearchChange}
+                onSearchNext={handleSearchNext}
+                onSearchPrev={handleSearchPrev}
+                onSearchReplace={handleSearchReplace}
+                onSearchReplaceAll={handleSearchReplaceAll}
+                onSearchClose={handleSearchClose}
+                searchRegexError={searchRegexError}
+                searchInputRef={searchInputRef}
               />
             )}
             {!isPdf && mode === "edit" && isSplitPreview && (
