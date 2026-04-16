@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-04-16（Issue #20: 検索・置換・正規表現検索機能追加）
+> 最終更新: 2026-04-16（Issue #20: 検索・置換・正規表現検索機能追加、不具合修正反映）
 
 ---
 
@@ -285,17 +285,17 @@ UIレイアウト:
 | `fontFamily` | `string \| undefined` | エディタフォントファミリー |
 | `tabWidth` | `2 \| 4` | タブ幅（スペース数、デフォルト 2） |
 | `searchState` | `SearchState \| undefined` | 検索パネルの状態（Issue #20） |
-| `searchMatches` | `SearchMatch[]` | マッチ位置リスト（Issue #20） |
+| `matchCount` | `number` | マッチ総数（SearchBar への表示用、Issue #20） |
 | `onSearch*` | 各種コールバック | 検索操作コールバック群（Issue #20） |
 
-**検索ハイライト（Backdrop Overlay 技術）**
+**検索ハイライト（setSelectionRange 方式）**
 
-検索アクティブ時、`<textarea>` の背後に同一スタイルの `<div>` を重ね、`<mark>` タグでマッチ位置を背景色ハイライト。
+現在マッチを `textarea.setSelectionRange(start, end)` で選択し、ブラウザのネイティブ選択ハイライト（CSS `textarea::selection` でオレンジ系に着色）で表示する。
 
-- overlay div: `bg-white dark:bg-zinc-900`, `color: transparent`, `pointer-events: none`
-- 現在マッチ: `bg-orange-400/70`、他マッチ: `bg-yellow-300/50`
-- textarea は `bg-transparent` に変更（overlay の背景色が透けて見える）
-- `onScroll` で overlay の `scrollTop/scrollLeft` を textarea に同期
+- `focusMatch()` でフォーカス移動 → `setSelectionRange` → スクロール位置を中央に合わせる
+- フォーカス移動は明示的なナビゲーション操作時のみ実行（タイプ中はフォーカスを奪わない）
+- overlay div は使用しない（スクロールバー幅の差異による累積ズレを回避するため廃止）
+- 検索バーが開いている間、textarea の `Enter` / `Shift+Enter` で次/前マッチへ移動、`Escape` で検索バーを閉じる
 
 Editor の追加機能:
 
@@ -392,6 +392,8 @@ export function useSearch(
 - 通常検索: `toLowerCase()` で大文字小文字を区別しない `indexOf` ループ
 - 正規表現検索: `new RegExp(query, "gi")`、`try/catch` でエラーを `regexError` として返す
 - 空マッチによる無限ループ防止: `re.lastIndex++`
+- 正規表現モード時は `SearchMatch.groups` にキャプチャグループを格納（`[0]`=マッチ全体、`[1]`=第1グループ…）
+- 置換文字列の `$1`, `$2`, `$0` でグループ参照可能（全置換は `String.replace()` がネイティブ処理）
 
 ### useEditorActions
 
@@ -434,8 +436,10 @@ export function useEditorActions(
 | `Ctrl+;` | 現在の日付を `YYYY/M/D` 形式でカーソル位置に挿入 |
 | `Ctrl+:` | 現在の時刻を `hh:mm` 形式でカーソル位置に挿入 |
 | `Ctrl+F` | 検索パネルを開く（置換エリアは非表示で開始） |
-| `Enter`（検索入力中） | 次のマッチへ移動 |
-| `Shift+Enter`（検索入力中） | 前のマッチへ移動 |
+| `Enter`（検索入力中） | 次のマッチへ移動・textarea にフォーカス移動 |
+| `Shift+Enter`（検索入力中） | 前のマッチへ移動・textarea にフォーカス移動 |
+| `Enter`（検索パネル表示中・textarea 編集中） | 次のマッチへ移動（編集を中断せず続けてナビゲート可能） |
+| `Shift+Enter`（検索パネル表示中・textarea 編集中） | 前のマッチへ移動 |
 | `Escape`（検索パネル表示中） | 検索パネルを閉じる |
 
 ---
