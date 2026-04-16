@@ -3,6 +3,7 @@ import { open, save, confirm } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile, writeFile, mkdir, stat } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getVersion } from "@tauri-apps/api/app";
 import Header from "./components/Header";
 import Editor from "./components/Editor";
@@ -460,6 +461,19 @@ export default function App() {
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // セカンドインスタンスからのファイル引数を受け取る（多重起動防止・Issue #21）
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen<string[]>("single-instance", async (event) => {
+      const filePaths = event.payload;
+      for (const path of filePaths) {
+        await handleOpenFileFromExplorer(path);
+      }
+      tabsRef.current.pruneEmptyTabs();
+    }).then((f) => { unlisten = f; });
+    return () => { unlisten?.(); };
+  }, [handleOpenFileFromExplorer]);
 
   // グローバルキーボードショートカットを登録する（Ctrl/Cmd + キー）
   useEffect(() => {
