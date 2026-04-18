@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, Children, cloneElement, isValidElement } from "react";
+import { useEffect, useRef, useState, useMemo, Children, cloneElement, isValidElement } from "react";
 import type { ReactElement, InputHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { readFile } from "@tauri-apps/plugin-fs";
@@ -250,98 +251,106 @@ function headingId(children: React.ReactNode): string {
 export default function Preview({ markdown, filePath, isDark, previewTheme, scrollRef, onCheckboxToggle }: PreviewProps) {
   const [viewerContent, setViewerContent] = useState<MediaViewerContent | null>(null);
 
+  // components オブジェクトをメモ化する。
+  // viewerContent の変化（メディアビューア開閉）のたびにインラインオブジェクトが再生成されると
+  // React reconciler が各関数を「別コンポーネント型」と判断し ReactMarkdown の出力ツリー全体を
+  // unmount → remount する。unmount 中に scrollHeight が激減し scrollTop がリセットされるため、
+  // useMemo で参照を安定させてスクロール位置が維持されるようにする。
+  const components = useMemo<Components>(() => ({
+    code({ className, children }) {
+      const language = className?.replace("language-", "");
+
+      if (language === "mermaid") {
+        return <MermaidDiagram code={String(children)} isDark={isDark} onOpenViewer={setViewerContent} />;
+      }
+
+      // インラインコード（className なし）はそのまま
+      if (!className) {
+        return <code>{children}</code>;
+      }
+
+      // ブロックコード: シンタックスハイライト
+      const raw = String(children).replace(/\n$/, "");
+      const lang = language && hljs.getLanguage(language) ? language : undefined;
+      const result = lang
+        ? hljs.highlight(raw, { language: lang })
+        : hljs.highlightAuto(raw);
+
+      return (
+        <code
+          className={`hljs${lang ? ` language-${lang}` : ""}`}
+          dangerouslySetInnerHTML={{ __html: result.value }}
+        />
+      );
+    },
+    a({ href, children }) {
+      return (
+        <a
+          href={href}
+          onClick={(e) => {
+            e.preventDefault();
+            if (href) openUrl(href).catch(console.error);
+          }}
+        >
+          {children}
+        </a>
+      );
+    },
+    img({ src, alt }) {
+      return <ImageRenderer src={src} alt={alt} filePath={filePath} onOpenViewer={setViewerContent} />;
+    },
+    p({ node, children }) {
+      const line = (node as any)?.position?.start?.line;
+      return <p data-source-line={line}>{children}</p>;
+    },
+    blockquote({ node, children }) {
+      const line = (node as any)?.position?.start?.line;
+      return <blockquote data-source-line={line}>{children}</blockquote>;
+    },
+    pre({ node, children }) {
+      const line = (node as any)?.position?.start?.line;
+      return <pre data-source-line={line}>{children}</pre>;
+    },
+    table({ node, children }) {
+      const line = (node as any)?.position?.start?.line;
+      return <table data-source-line={line}>{children}</table>;
+    },
+    li({ node, children, className }) {
+      const isTaskItem = className?.toString().includes("task-list-item");
+      if (!isTaskItem || !onCheckboxToggle) {
+        return <li className={className}>{children}</li>;
+      }
+      const line = (node as any)?.position?.start?.line as number | undefined;
+      return (
+        <li className={className}>
+          {Children.map(children, (child) => {
+            if (isValidElement(child) && (child as ReactElement<InputHTMLAttributes<HTMLInputElement>>).type === "input") {
+              return cloneElement(child as ReactElement<InputHTMLAttributes<HTMLInputElement>>, {
+                disabled: false,
+                onChange: () => line !== undefined && onCheckboxToggle(line),
+              });
+            }
+            return child;
+          })}
+        </li>
+      );
+    },
+    h1({ node, children }) { return <h1 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h1>; },
+    h2({ node, children }) { return <h2 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h2>; },
+    h3({ node, children }) { return <h3 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h3>; },
+    h4({ node, children }) { return <h4 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h4>; },
+    h5({ node, children }) { return <h5 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h5>; },
+    h6({ node, children }) { return <h6 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h6>; },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filePath, isDark, onCheckboxToggle, setViewerContent]);
+
   return (
     <div ref={scrollRef} className="print-area w-full h-full overflow-y-auto p-4 prose prose-zinc dark:prose-invert max-w-none">
       <style>{THEME_CSS[previewTheme]}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
-        components={{
-          code({ className, children }) {
-            const language = className?.replace("language-", "");
-
-            if (language === "mermaid") {
-              return <MermaidDiagram code={String(children)} isDark={isDark} onOpenViewer={setViewerContent} />;
-            }
-
-            // インラインコード（className なし）はそのまま
-            if (!className) {
-              return <code>{children}</code>;
-            }
-
-            // ブロックコード: シンタックスハイライト
-            const raw = String(children).replace(/\n$/, "");
-            const lang = language && hljs.getLanguage(language) ? language : undefined;
-            const result = lang
-              ? hljs.highlight(raw, { language: lang })
-              : hljs.highlightAuto(raw);
-
-            return (
-              <code
-                className={`hljs${lang ? ` language-${lang}` : ""}`}
-                dangerouslySetInnerHTML={{ __html: result.value }}
-              />
-            );
-          },
-          a({ href, children }) {
-            return (
-              <a
-                href={href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (href) openUrl(href).catch(console.error);
-                }}
-              >
-                {children}
-              </a>
-            );
-          },
-          img({ src, alt }) {
-            return <ImageRenderer src={src} alt={alt} filePath={filePath} onOpenViewer={setViewerContent} />;
-          },
-          p({ node, children }) {
-            const line = (node as any)?.position?.start?.line;
-            return <p data-source-line={line}>{children}</p>;
-          },
-          blockquote({ node, children }) {
-            const line = (node as any)?.position?.start?.line;
-            return <blockquote data-source-line={line}>{children}</blockquote>;
-          },
-          pre({ node, children }) {
-            const line = (node as any)?.position?.start?.line;
-            return <pre data-source-line={line}>{children}</pre>;
-          },
-          table({ node, children }) {
-            const line = (node as any)?.position?.start?.line;
-            return <table data-source-line={line}>{children}</table>;
-          },
-          li({ node, children, className }) {
-            const isTaskItem = className?.toString().includes("task-list-item");
-            if (!isTaskItem || !onCheckboxToggle) {
-              return <li className={className}>{children}</li>;
-            }
-            const line = (node as any)?.position?.start?.line as number | undefined;
-            return (
-              <li className={className}>
-                {Children.map(children, (child) => {
-                  if (isValidElement(child) && (child as ReactElement<InputHTMLAttributes<HTMLInputElement>>).type === "input") {
-                    return cloneElement(child as ReactElement<InputHTMLAttributes<HTMLInputElement>>, {
-                      disabled: false,
-                      onChange: () => line !== undefined && onCheckboxToggle(line),
-                    });
-                  }
-                  return child;
-                })}
-              </li>
-            );
-          },
-          h1({ node, children }) { return <h1 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h1>; },
-          h2({ node, children }) { return <h2 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h2>; },
-          h3({ node, children }) { return <h3 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h3>; },
-          h4({ node, children }) { return <h4 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h4>; },
-          h5({ node, children }) { return <h5 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h5>; },
-          h6({ node, children }) { return <h6 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h6>; },
-        }}
+        components={components}
       >
         {stripFrontMatter(markdown)}
       </ReactMarkdown>
