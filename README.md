@@ -8,7 +8,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ## リリースノート
 
-### v0.11.0 — 2026-04-19
+### [v0.11.0](release/light-md_0.11.0_x64-setup.exe) — 2026-04-19
 
 #### Added
 
@@ -21,7 +21,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.10.0 — 2026-04-17
+### [v0.10.0](release/light-md_0.10.0_x64-setup.exe) — 2026-04-17
 
 #### Added
 
@@ -30,7 +30,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.9.0 — 2026-04-15
+### [v0.9.0](release/light-md_0.9.0_x64-setup.exe) — 2026-04-15
 
 #### Added
 
@@ -38,7 +38,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.8.0 — 2026-04-15
+### [v0.8.0](release/light-md_0.8.0_x64-setup.exe) — 2026-04-15
 
 #### Added
 
@@ -55,7 +55,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.7.0 — 2026-04-08
+### [v0.7.0](release/light-md_0.7.0_x64-setup.exe) — 2026-04-08
 
 #### Added
 
@@ -69,7 +69,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.6.0 — 2026-04-05
+### [v0.6.0](release/light-md_0.6.0_x64-setup.exe) — 2026-04-05
 
 #### Added
 
@@ -82,7 +82,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.5.1 — 2026-03-29
+### [v0.5.1](release/light-md_0.5.1_x64-setup.exe) — 2026-03-29
 
 #### Added
 
@@ -90,7 +90,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.5.0 — 2026-03-29
+### [v0.5.0](release/light-md_0.5.0_x64-setup.exe) — 2026-03-29
 
 #### Added
 
@@ -104,7 +104,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.4.0 — 2026-03-20
+### [v0.4.0](release/light-md_0.4.0_x64-setup.exe) — 2026-03-20
 
 #### Added
 
@@ -118,7 +118,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.3.1 — 2026-03-18
+### [v0.3.1](release/light-md_0.3.1_x64-setup.exe) — 2026-03-18
 
 #### Added
 
@@ -132,7 +132,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.3.0 — 2026-03-18
+### [v0.3.0](release/light-md_0.3.0_x64-setup.exe) — 2026-03-18
 
 #### Added
 
@@ -148,7 +148,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.2.0 — 2026-03-17
+### [v0.2.0](release/light-md_0.2.0_x64-setup.exe) — 2026-03-17
 
 #### Added
 
@@ -169,7 +169,7 @@ Tauri v2 + React 19 + TypeScript で構築。
 
 ---
 
-### v0.1.0 — 2025-03-16
+### [v0.1.0](release/light-md_0.1.0_x64-setup.exe) — 2025-03-16
 
 #### Added
 
