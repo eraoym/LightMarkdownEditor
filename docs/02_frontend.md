@@ -1,6 +1,6 @@
 # 02 フロントエンド設計（React 19 + Tailwind v4）
 
-> 最終更新: 2026-04-16（Issue #20: 検索・置換・正規表現検索機能追加、不具合修正反映）
+> 最終更新: 2026-04-19（Issue #22: メディアビューアー（ライトボックス）追加）
 
 ---
 
@@ -328,6 +328,7 @@ Editor の追加機能:
 - `previewTheme` に対応する CSS を `src/styles/themes/` から `?raw` インポートし、`<style>` タグとして注入することでテーマを切替。CSS 変数（`--tw-prose-*` / `--tw-prose-invert-*`）でライト/ダーク両対応
 - 文書先頭の YAML front matter（`---` ... `---` で囲まれたブロック）はプレビュー・目次の対象外とする（Issue #14 対応）
 - `rehype-raw` プラグインにより Markdown 内の HTML タグをそのままレンダリング（Issue #15 対応）
+- **メディアビューアー（Issue #22）**: プレビュー内の画像または mermaid SVG をクリックするとライトボックス（`MediaViewer`）を表示。ホイールでズーム（0.1〜10倍）、ドラッグで表示位置のパン、ダブルクリックでリセット、Escape キー・背景クリック・✕ボタンで閉じる。`wheel` イベントは `{ passive: false }` で直接登録し WebView2 上の `preventDefault` を保証する。`img` は `draggable={false}` でネイティブ DnD との競合を回避
 
 ---
 
