@@ -23,7 +23,7 @@
 - ヘッダー左端に `☰` でエクスプローラーサイドバーのトグル
 - タブバーで複数ファイルを同時編集可能
 - エクスプローラーは左サイドバー（幅可変、初期 192px、min 160px / max 480px）、`☰` でトグル
-- **スプリットプレビュー（編集モード時）**: `Split` ボタンでエディタ右にプレビューを横並び表示。ハンドルでリサイズ（幅は localStorage 永続化）
+- **スプリットプレビュー（編集モード時）**: `Split` ボタンでエディタ右にプレビューを横並び表示。ハンドルでリサイズ（幅は localStorage 永続化）。スクロールは**ライン番号マッピング方式**で双方向同期：`data-source-line` 属性を持つプレビュー要素と textarea の行番号を対応づけ、要素間を補間して scrollTop を設定する（画像等でプレビュー高さが大きく異なる場合でも正確に同期）。`data-source-line` が存在しない場合は比率ベースにフォールバック。`isSyncingScroll` フラグを `requestAnimationFrame` で非同期解除し連鎖スクロールを防止する
 - **TOCサイドバー（プレビューモード時）**: `TOC` ボタンでプレビュー右に目次サイドバーを表示。ハンドルでリサイズ（幅は localStorage 永続化）
 - サイドバー・ハンドルとも localStorage で幅永続化
 - ウィンドウサイズも localStorage に保存し、起動時に復元
@@ -329,6 +329,7 @@ Editor の追加機能:
 - 文書先頭の YAML front matter（`---` ... `---` で囲まれたブロック）はプレビュー・目次の対象外とする（Issue #14 対応）
 - `rehype-raw` プラグインにより Markdown 内の HTML タグをそのままレンダリング（Issue #15 対応）
 - **メディアビューアー（Issue #22）**: プレビュー内の画像または mermaid SVG をクリックするとライトボックス（`MediaViewer`）を表示。ホイールでズーム（0.1〜10倍）、ドラッグで表示位置のパン、ダブルクリックでリセット、Escape キー・背景クリック・✕ボタンで閉じる。`wheel` イベントは `{ passive: false }` で直接登録し WebView2 上の `preventDefault` を保証する。`img` は `draggable={false}` でネイティブ DnD との競合を回避
+- **スクロール同期用ライン番号属性**: `p` / `h1`〜`h6` / `blockquote` / `pre` / `table` のカスタムレンダラーが `node.position.start.line`（remark 1-indexed 行番号）を `data-source-line` 属性として出力する。この属性を用いてエディタとプレビューの行位置を対応づける（`App.tsx` のスクロール同期ロジックが読み取る）
 
 ---
 

@@ -192,24 +192,102 @@ export default function App() {
     const preview = previewScrollRef.current;
     if (!editor || !preview) return;
 
-    /** エディタのスクロール位置をプレビューに比率で同期する */
+    /** data-source-line 付き要素を行番号順に取得する */
+    const getLineNodes = () =>
+      Array.from(preview.querySelectorAll<HTMLElement>("[data-source-line]"))
+        .map((el) => ({ el, line: Number(el.dataset.sourceLine ?? 0) }))
+        .sort((a, b) => a.line - b.line);
+
+    /** 要素のスクロールコンテナ内での絶対オフセット（px）を返す */
+    const offsetInContainer = (el: HTMLElement): number => {
+      const elRect = el.getBoundingClientRect();
+      const containerRect = preview.getBoundingClientRect();
+      return elRect.top - containerRect.top + preview.scrollTop;
+    };
+
+    /** エディタのスクロール位置をプレビューにライン番号ベースで同期する */
     const onEditorScroll = () => {
       if (isSyncingScroll.current) return;
       isSyncingScroll.current = true;
-      const max = editor.scrollHeight - editor.clientHeight;
-      if (max > 0)
-        preview.scrollTop = (editor.scrollTop / max) * (preview.scrollHeight - preview.clientHeight);
-      isSyncingScroll.current = false;
+
+      const nodes = getLineNodes();
+      if (nodes.length === 0) {
+        // フォールバック: 比率ベース
+        const max = editor.scrollHeight - editor.clientHeight;
+        if (max > 0)
+          preview.scrollTop = (editor.scrollTop / max) * (preview.scrollHeight - preview.clientHeight);
+      } else {
+        const totalLines = editor.value.split("\n").length;
+        const lineHeight = editor.scrollHeight / Math.max(totalLines, 1);
+        const topLine = editor.scrollTop / lineHeight + 1; // remark の行番号は 1-indexed
+
+        let lo = nodes[0];
+        let hi = nodes[nodes.length - 1];
+        for (let i = 0; i < nodes.length - 1; i++) {
+          if (nodes[i].line <= topLine && nodes[i + 1].line > topLine) {
+            lo = nodes[i];
+            hi = nodes[i + 1];
+            break;
+          }
+        }
+
+        if (lo === hi || lo.line === hi.line) {
+          preview.scrollTop = offsetInContainer(lo.el);
+        } else {
+          const ratio = (topLine - lo.line) / (hi.line - lo.line);
+          preview.scrollTop = offsetInContainer(lo.el) + ratio * (offsetInContainer(hi.el) - offsetInContainer(lo.el));
+        }
+      }
+
+      requestAnimationFrame(() => { isSyncingScroll.current = false; });
     };
 
-    /** プレビューのスクロール位置をエディタに比率で同期する */
+    /** プレビューのスクロール位置をエディタにライン番号ベースで同期する */
     const onPreviewScroll = () => {
       if (isSyncingScroll.current) return;
       isSyncingScroll.current = true;
-      const max = preview.scrollHeight - preview.clientHeight;
-      if (max > 0)
-        editor.scrollTop = (preview.scrollTop / max) * (editor.scrollHeight - editor.clientHeight);
-      isSyncingScroll.current = false;
+
+      const nodes = getLineNodes();
+      if (nodes.length === 0) {
+        // フォールバック: 比率ベース
+        const max = preview.scrollHeight - preview.clientHeight;
+        if (max > 0)
+          editor.scrollTop = (preview.scrollTop / max) * (editor.scrollHeight - editor.clientHeight);
+      } else {
+        const previewRect = preview.getBoundingClientRect();
+
+        // ビューポート先頭に最も近い要素ペアを探す
+        let lo = nodes[0];
+        let hi = nodes.length > 1 ? nodes[1] : nodes[0];
+        for (let i = 0; i < nodes.length - 1; i++) {
+          const loVis = nodes[i].el.getBoundingClientRect().top - previewRect.top;
+          const hiVis = nodes[i + 1].el.getBoundingClientRect().top - previewRect.top;
+          if (loVis <= 0 && hiVis > 0) {
+            lo = nodes[i];
+            hi = nodes[i + 1];
+            break;
+          }
+          if (hiVis <= 0) {
+            lo = nodes[i + 1];
+            hi = nodes[Math.min(i + 2, nodes.length - 1)];
+          }
+        }
+
+        const loVis = lo.el.getBoundingClientRect().top - previewRect.top;
+        const hiVis = hi.el.getBoundingClientRect().top - previewRect.top;
+
+        let ratio = 0;
+        if (lo !== hi && hiVis !== loVis) {
+          ratio = Math.max(0, Math.min(1, -loVis / (hiVis - loVis)));
+        }
+
+        const currentLine = lo.line + ratio * (hi.line - lo.line);
+        const totalLines = editor.value.split("\n").length;
+        const lineHeight = editor.scrollHeight / Math.max(totalLines, 1);
+        editor.scrollTop = (currentLine - 1) * lineHeight;
+      }
+
+      requestAnimationFrame(() => { isSyncingScroll.current = false; });
     };
 
     editor.addEventListener("scroll", onEditorScroll);

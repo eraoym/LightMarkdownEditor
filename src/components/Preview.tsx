@@ -299,6 +299,22 @@ export default function Preview({ markdown, filePath, isDark, previewTheme, scro
           img({ src, alt }) {
             return <ImageRenderer src={src} alt={alt} filePath={filePath} onOpenViewer={setViewerContent} />;
           },
+          p({ node, children }) {
+            const line = (node as any)?.position?.start?.line;
+            return <p data-source-line={line}>{children}</p>;
+          },
+          blockquote({ node, children }) {
+            const line = (node as any)?.position?.start?.line;
+            return <blockquote data-source-line={line}>{children}</blockquote>;
+          },
+          pre({ node, children }) {
+            const line = (node as any)?.position?.start?.line;
+            return <pre data-source-line={line}>{children}</pre>;
+          },
+          table({ node, children }) {
+            const line = (node as any)?.position?.start?.line;
+            return <table data-source-line={line}>{children}</table>;
+          },
           li({ node, children, className }) {
             const isTaskItem = className?.toString().includes("task-list-item");
             if (!isTaskItem || !onCheckboxToggle) {
@@ -319,12 +335,12 @@ export default function Preview({ markdown, filePath, isDark, previewTheme, scro
               </li>
             );
           },
-          h1({ children }) { return <h1 id={headingId(children)}>{children}</h1>; },
-          h2({ children }) { return <h2 id={headingId(children)}>{children}</h2>; },
-          h3({ children }) { return <h3 id={headingId(children)}>{children}</h3>; },
-          h4({ children }) { return <h4 id={headingId(children)}>{children}</h4>; },
-          h5({ children }) { return <h5 id={headingId(children)}>{children}</h5>; },
-          h6({ children }) { return <h6 id={headingId(children)}>{children}</h6>; },
+          h1({ node, children }) { return <h1 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h1>; },
+          h2({ node, children }) { return <h2 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h2>; },
+          h3({ node, children }) { return <h3 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h3>; },
+          h4({ node, children }) { return <h4 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h4>; },
+          h5({ node, children }) { return <h5 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h5>; },
+          h6({ node, children }) { return <h6 id={headingId(children)} data-source-line={(node as any)?.position?.start?.line}>{children}</h6>; },
         }}
       >
         {stripFrontMatter(markdown)}
